@@ -1,0 +1,99 @@
+---
+title: "ex3_diet"
+author: "Paul Hosek, .......add more names here"
+date: "2023-02-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+
+
+```
+
+# a)
+- graphical summary
+- test claim of diet affecting weight loss
+  - check assumptions of test
+
+```{r, echo=TRUE}
+data <- read.table("data/diet.txt", header=TRUE)
+data$weight.lost <- data$preweight - data$weight6weeks
+data
+```
+
+```{r, echo=TRUE}
+# Assuming your data frame is called `mydata`
+
+boxplot(weight.lost ~ diet, data = data, xlab = "Diet", ylab = "Weight Lost",
+        main = "Graphical summary: Effect of diet on weight loss")
+
+```
+
+```{r, echo=FALSE}
+
+ggplot(data, aes(x = weight.lost, fill = factor(diet))) +
+  geom_histogram(alpha = 1, position = "stack", bins = 10) +
+  labs(title = "Graphical summary: Effect of diet on weight loss"
+       , x = "Weight Lost", y = "Frequency", fill = "Diet")
+```
+
+To test if the diet has a general effect on weight loss, we can do a paired t-test. Here, we test if there is a significant weight loss between the measurements.
+
+First, testing the assumption of normality, we see that it is met. The data follows approximately a normal distribution
+```{r, echo=TRUE}
+qqnorm(data$weight.lost); qqline(data$weight.lost)
+```
+Further, the assumption of a linear relationship of the independent and dependent variables is met. The data spreads evenly around the the fitted linear line and does not follow a higher order interaction.
+```{r, echo=TRUE}
+
+plot(data$preweight, data$weight.lost, main = "Testing for a linear relationship", xlab = "Preweight", ylab = "Weight Loss")
+abline(lm(data$weight.lost ~ data$preweight), col = "red")
+legend("bottomright", legend = "Fitted linear relationship", col = "red", lty = 1)
+```
+The results of the repeated measures t-test show us that at alpha=0.05, there is a significant difference between pre- and post weight. This indicates a statistically significant effect of the diet.
+```{r, echo=TRUE}
+t.test(data$weight6weeks, data$preweight,paired=TRUE)
+```
+#b)
+
+
+First, testing for normality, we can see that data is approximately normal distributed. However, extreme values on both tails spread some doubt about the normality assumption.
+```{r, echo=TRUE}
+one_w_anova <- lm(weight6weeks ~ factor(diet), data)
+qqnorm(one_w_anova$residuals); qqline(one_w_anova$residuals)
+
+```
+
+
+Secondly, testing for the independence of residuals. For this, we can plot the order of observation against the residuals. Here, we see data to be randomly distributed within blocks.
+```{r, echo=TRUE}
+plot(model, which = 1)
+```
+
+We now can do a one-way ANOVA to test the effect of type of diet. The result indicate, that there is no significant difference in the type of diet on weight loss. Based on the results of the repeated measures t-test combined with the absence of any difference between diets, we can conclude that all types of diets lead to weight loss.
+```{r, echo=TRUE}
+anova(one_w_anova)
+```
+It is also possible to alternatively conduct a Kruskal-Wallis test instead of the one-way ANOVA. Again, no significant difference between groups was found.
+```{r, echo=TRUE}
+kruskal.test(weight6weeks ~ diet, data)
+```
+
+# c)
+```{r, echo=TRUE}
+
+```
+
+```{r, echo=TRUE}
+
+```
+
+```{r, echo=TRUE}
+
+```
