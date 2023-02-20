@@ -1,0 +1,126 @@
+---
+title: "ex3_diet"
+author: "Paul Hosek, .......add more names here"
+date: "2023-02-17"
+output: html_document
+---
+```{r, include=FALSE}
+source("../utilities.R")
+```
+
+# Exercise 3
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+```
+
+**a)**
+- graphical summary
+- test claim of diet affecting weight loss
+  - check assumptions of test
+
+```{r, echo=TRUE}
+data <- read.table("data/diet.txt", header=TRUE)
+data$diet <- factor(data$diet)
+data$weight.lost <- data$preweight - data$weight6weeks
+```
+
+```{r, echo=TRUE}
+# Assuming your data frame is called `mydata`
+# boxplot(weight.lost ~ diet, data = data, xlab = "Diet", ylab = "Weight Lost",
+#         main = "Graphical summary: Effect of diet on weight loss")
+
+```
+
+```{r, echo=FALSE}
+
+# ggplot(data, aes(x = weight.lost, fill = diet)) +
+#   geom_histogram(alpha = 1, position = "stack", bins = 10) +
+#   labs(title = "Graphical summary: Effect of diet on weight loss"
+#        , x = "Weight Lost", y = "Frequency", fill = "Diet")
+```
+
+To test if the diet has a general effect on weight loss, we can do a paired t-test. Here, we test if there is a significant weight loss between the measurements.
+
+First, testing the assumption of normality, we see that it is met. The data follows approximately a normal distribution
+```{r, echo=TRUE}
+shapiro <- check_assumptions("weight.lost", data, "diet")
+# qqnorm(data$weight.lost); qqline(data$weight.lost)
+```
+Upon visual inspection, the assumption of a normal distribution appears to be met. The Shapiro-Wilk test does not find a violation of the normality assumption, either, with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$.
+
+Further, the assumption of a linear relationship of the independent and dependent variables is met. The data spreads evenly around the the fitted linear line and does not follow a higher order interaction.
+```{r, echo=TRUE}
+
+plot(data$preweight, data$weight6weeks, main = "Testing for a linear relationship", xlab = "Preweight", ylab = "Post-weight")
+abline(lm(data$weight6weeks ~ data$preweight), col = "red")
+legend("bottomright", legend = "Fitted linear relationship", col = "red", lty = 1)
+```
+The results of the repeated measures t-test show us that at alpha=0.05, there is a significant difference between pre- and post weight. This indicates a statistically significant effect of the diet. However, since there are three different types of diets, it is possible that if combined they have a significant effect on weight loss, but there are differences between the diets. It is possible, that one of the diets leads to no weight loss, but the other two do. As such, we need to conduct a one-way ANOVA to investigate the effect of the type of diet.
+```{r, echo=TRUE}
+t.test(data$weight6weeks, data$preweight,paired=TRUE)
+```
+
+**b)**
+
+
+First, testing for normality, we can see that data is approximately normal distributed. However, extreme values on both tails spread some doubt about the normality assumption.
+```{r, echo=TRUE}
+one_w_anova <- lm(weight.lost ~ diet, data)
+qqnorm(one_w_anova$residuals); qqline(one_w_anova$residuals)
+
+```
+
+
+Secondly, testing for the independence of residuals. For this, we can plot the order of observation against the residuals. Here, we see data to be randomly distributed within blocks.
+```{r, echo=TRUE}
+plot(one_w_anova, which = 1)
+```
+
+We now can do a one-way ANOVA to test the effect of type of diet. The result indicate, that there is a significant difference in the type of diet on weight loss (at alpha=0.5). Based on the result of the ANOVA alone, we cannot conclude which type of diet is different.
+```{r, echo=TRUE}
+res_ow <-anova(one_w_anova)
+res_ow
+```
+To identify which type of diet is best for loosing weight, we will conduct post-hoc t-tests between all pairs of the ANOVA. Here, we must account for the multiple comparisons and adjust our sigificance level accordingly. As such, we will use Bonferroni correction.
+
+```{r, echo=TRUE}
+post_hoc <- pairwise.t.test(data$weight.lost, data$diet, p.adjust.method = "bonferroni")
+post_hoc
+```
+We can see that there is a significant difference between diets 1 and 3 and diets 2 and 3. However, no significant difference between diet 1 and 2 was found.
+
+```{r, echo=TRUE}
+means <- aggregate(data$weight.lost, list(data$diet),mean)
+names(means)[2] <- "Average weight loss"
+names(means)[1] <- "Diet Type"
+
+means
+```
+
+Comparing the means, we can see the direction of the relationships. Based on the significant differences found before, we can conclude that diet 3 is more effective than diets 1 and 2. It is the best diet for losing weight. But, all three diets lead to weight loss.
+
+
+It is also possible to alternatively conduct a Kruskal-Wallis test instead of the one-way ANOVA. Again, a significant difference at the same significance level between groups was found.
+
+```{r, echo=TRUE}
+kruskal.test(weight.lost ~ diet, data)
+```
+
+**c)**
+```{r, echo=TRUE}
+two_w_anova <- lm(weight.lost ~ diet * gender, data)
+check_assumptions("weight.lost", data, list("gender", "diet"), anova_model = two_w_anova)
+print(anova(two_w_anova))
+```
+
+**d)**
+```{r, echo=TRUE}
+
+```
+
+```{r, echo=TRUE}
+
+```

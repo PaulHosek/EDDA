@@ -5,46 +5,41 @@ date: "2023-02-17"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
-```
+# Exercise 2
 
+```{r, include=FALSE}
+source("../utilities.R")
+```
 
 ```{r}
 library(ggplot2)
 library(dplyr)
 library(ggpubr)
-data <- read.table("data/cholesterol.txt", header = TRUE, sep = " ");
-print(colnames(data))
-
+data <- read.table("data/cholesterol.txt", header = TRUE, sep = " ")
 ```
 
-## Including Plots
+**a)**
 
-First plotting the discrete distibution of values, we see that values apprear 
-approximately normally distibuted. Further, QQ-plots indicate that samples 
-from both measurements are similarly distibuted by insepection.
+First plotting the discrete distribution of values, we see that values appear 
+approximately normally distributed. Further, QQ-plots indicate that samples 
+from both measurements are similarly distributed by inspection.
 However, we need to confirm this with thorough statistical testing. 
 
 ```{r, echo=TRUE}
-data_long <- data.frame(
-  Time = rep(c("Before", "After 8 Weeks"), each = nrow(data)),
-  Value = c(data$Before, data$After8weeks)
-);
-ggplot(data_long, aes(x = Value, fill = Time)) +
-  geom_histogram(alpha = 0.5, position = "identity", bins = 10) +
-  labs(title = "Histogram of Before and After 8 Weeks", x = "Values", y = "Frequency") +
-  scale_fill_manual(values = c("#E69F00", "#56B4E9"), labels = c("Before", "After 8 Weeks"));
+shapiros <- check_assumptions(list("Before", "After8weeks"), data)
+# data_long <- data.frame(
+#   Time = rep(c("Before", "After 8 Weeks"), each = nrow(data)),
+#   Value = c(data$Before, data$After8weeks)
+# );
+# ggplot(data_long, aes(x = Value, fill = Time)) +
+#   geom_histogram(alpha = 0.5, position = "identity", bins = 10) +
+#   labs(title = "Histogram of Before and After 8 Weeks", x = "Values", y = "Frequency") +
+#   scale_fill_manual(values = c("#E69F00", "#56B4E9"), labels = c("Before", "After 8 Weeks"));
 ```
 
-```{r, echo=TRUE}
-res1 <- shapiro.test(data$Before)$p.value
-res2 <- shapiro.test(data$After8weeks)$p.value
-cat("Pvalues are", res1, "and", res2, "..")
-```
 Shapiro-Wilk tests for normality indicate that the assumption of normality
-is met for both pre- and post-measurement. P-values are  0.9674667 for the 
-before measurement and  0.9183031 for the post measurement respectively.
+is met for both pre- and post-measurement. P-values are $p = `r sprintf('%.2f',shapiros[[1]]$p.value)`$ for the 
+before measurement and  $p = `r sprintf('%.2f',shapiros[[2]]$p.value)`$ for the post measurement respectively.
 
 
 Further, we observe a very high correlation of the data.
@@ -56,8 +51,9 @@ ggscatter(data, x = colnames(data)[1], y = colnames(data)[2],
           xlab = "Before", ylab = "After 8 Weeks");
 
 ```
-# b)
-First, we use a non-parameteric, repeated measures t-test.
+
+**b)**
+First, we use a non-parametric, repeated measures t-test.
 ```{r, echo=TRUE}
 t.test(data$Before, data$After8weeks, paired = TRUE, alternative = "two.sided");
 ```
@@ -72,7 +68,7 @@ is strong enough for the diet to be useful in practice.
 The permutation test is applicable, since it can express any test-statistic
 including repeated measures and also is non-parameteric.
 
-# c)
+**c)**
 ```{r, echo=TRUE}
 nsamples <- 1000;
 
@@ -83,7 +79,7 @@ This confidence interval could be improved by resampling more often.
 However, since the sample size is only 18, conclusions about the true population
 mean are limited. As such, we recommend to collect more samples.
 
-# d)
+**d)**
 ```{r, echo=TRUE}
 nsamples <- 1000;
 thetas <- seq(3, 12, by = .01);
@@ -126,7 +122,7 @@ legend("topright", legend = c("p-value", "0.05"),
        col = c("black", "red"), lty = c(1, 1));
 
 ```
-# e)
+**e)**
 
 ```{r, echo=TRUE}
 binom_e <- binom.test(sum(data$After8weeks < 6), nrow(data), alternative = "less")
