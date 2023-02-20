@@ -1,0 +1,101 @@
+---
+title: "Assignment1"
+author: "Luca Cavellini, Paul Hosek, Robert Satzger"
+date: "2/12/2023"
+output: html_document
+---
+
+```{r, include=FALSE}
+source("../utilities.R")
+```
+
+# Exercise 1
+**a)**
+
+To test for a normal distribution of the sample, the output below show a histogram, a Q-Q plot, and a Shapiro-Wilk test.
+```{r}
+library(ggplot2)
+birthweight <- read.table('data/birthweight.txt', header = TRUE)
+shapiro <- check_assumptions("birthweight", birthweight)
+```
+
+The histogram appears to have a bell-shaped curve with no dominant skew to either side, suggesting a normal distribution of the sample data. This is also supported by the roughly linear shape displayed in the Q-Q plot. Moreover, the Shapiro-Wilk test for normality is not significant with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$. Thus, we cannot reject the null hypothesis stating that the sample differs from a normal distribution. Based on these three indications, we therefore assume that the birth weights follow a normal distribution.
+
+```{r}
+birthweight <- birthweight$birthweight
+alpha = .04
+t = qt(1-alpha/2, df = length(birthweight)-1) # t of alpha/2
+margin = t * sd(birthweight) / sqrt(length(birthweight)) 
+lower_bound = mean(birthweight) - margin
+upper_bound = mean(birthweight) + margin
+```
+Based on our sample, the 96\% confidence interval for $\mu$ is $CI = [`r sprintf('%.2f',lower_bound)`,`r sprintf('%.2f',upper_bound)`]$.
+
+```{r}
+alpha = .04
+ci_length = 100
+margin = ci_length / 2 
+q = qnorm(1-alpha/2) # approximating with z-scores instead of t-values because t-distribution depends on sample size itself
+n = q^2 * sd(birthweight)^2 / margin^2 
+```
+Ensuring a confidence interval with a maximum length of 100 requires a sample size $n \geq `r ceiling(n)`$.
+
+```{r}
+alpha = .04
+B = 1000
+Tstar = numeric(B)
+for (i in 1:B){
+  Tstar[i] = mean(sample(birthweight, replace = TRUE))
+}
+TstarLower = quantile(Tstar, alpha/2)
+TstarUpper = quantile(Tstar, 1-alpha/2)
+upper_bound = 2*mean(birthweight)-TstarUpper
+lower_bound = 2*mean(birthweight)-TstarLower
+```
+
+The 96% confidence interval resulting from bootstrapping is $CI = [`r sprintf('%.2f',upper_bound)`,`r sprintf('%.2f',lower_bound)`]$. As expected, the boundaries of the bootstrapped confidence interval are very similar to the calculated confidence interval reported prior because the sample follows an approximately normal distribution.
+
+**b)**
+
+Based on the assumption of normality established in part **a**, we perform a right-sided one-sample t-test.
+```{r}
+mu = 2800
+t.test(birthweight, mu = mu, alternative = 'g')
+binom.test(sum(birthweight>mu),length(birthweight),p=.5,alt='g')
+```
+
+**c)** 
+REFINE!
+The power of the two tests can be compared by simulation. 
+In this case, the alternative hypothesis is true, stating that the true mean is above 2800. 
+Therefore, one approach would be to randomly sample a mean from a normal distribution with mu in the interval $I = (2800, max(birthweight)]$.
+With this mean, one could produce a sample $X^\ast$ and perform each of the two statistical tests, testing its sample mean $\overline{X}^\ast$ against the hypothesis that the true mean is above 2800.  
+Consequently, one can calculate the proportion of times each test correctly rejected the null hypothesis. 
+
+It can be expected that the t-test will have a higher power than the sign test because it correctly assumes a normal distribution of the sample. In contrast, the sign test discards a lot of information. This makes it more robust than the t-test but reduces power in cases where assumptions aren't violated.
+
+**d)**
+```{r, collapse=TRUE}
+p_hat = sum(birthweight<2600)/length(birthweight)
+p_left = .25
+me = p_hat - p_left
+p_right = p_hat + me
+z = me/sqrt(p_hat*(1-p_hat)/length(birthweight)) # z of alpha/2
+conf_level = 1-pnorm(z, lower.tail = FALSE)*2
+```
+
+Taking our sample proportion as $\hat{p}$, we can use the margin of error to compute the right side of the confidence interval. This results in the confidence interval $CI = [`r sprintf('%.2f',p_left)`,`r sprintf('%.2f',p_right)`]$. The interval has a confidence level of $`r sprintf('%.0f',conf_level*100)`\%$.
+
+**e)**
+The problem can be seen as a comparison of proportions between two independent samples.
+```{r}
+k_male = 34
+k_female = 28
+n_male = k_male + 61
+n_female = k_female + 65
+p_female = k_female/n_female
+
+binom_test = binom.test(k_male, n_male, p=p_female)
+```
+
+The binomial test returns $p = `r sprintf('%.2f',binom_test$p.value)`$. Since it is larger than the standard significance level $\alpha = 0.05$, we reject the null hypothesis stating that the two proportions are significantly different. Thus, the expert's claim is not supported by the data.

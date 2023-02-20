@@ -1,0 +1,107 @@
+---
+title: "wk1ex4"
+author: "Robert Satzger"
+date: "2/20/2023"
+output: html_document
+---
+
+```{r, include=FALSE}
+source("../utilities.R")
+```
+
+# Exercise 4
+**a)**
+```{r}
+library(MASS)
+
+random_plots <- vector('list', 4)
+for (i in 1:6){
+  random_plots[[1]] <- c(random_plots[[1]], rep(i, 4))
+  for (j in 2:4) random_plots[[j]] <- c(random_plots[[j]], sample(c(1,1,0,0)))
+}
+
+plots_df <- data.frame(random_plots)
+
+header <- c("block", "N", "P", "K")
+colnames(plots_df) <- header
+```
+**b)**
+```{r}
+library(dplyr)
+library(ggplot2)
+npk %>%
+  group_by(block, N) %>% 
+  summarize(mean_yield = mean(yield),
+            sd_yield = sd(yield)
+            ) %>%
+  ungroup() %>% 
+  ggplot(aes(x=block, y = mean_yield, fill=N)) +
+    geom_col(position=position_dodge())+
+    geom_errorbar(
+      aes(
+        ymin= mean_yield - sd_yield, 
+        ymax = mean_yield + sd_yield
+      ),
+      width=.2,
+      position=position_dodge(.9)
+      )
+```
+
+**c)**
+```{r}
+
+par(mfrow=c(1,2))
+
+npk$block <- as.factor(npk$block)
+npk$N <- as.factor(npk$N)
+boxplot(yield~block, npk)
+boxplot(yield~N, npk)
+
+par(mfrow=c(1,1))
+interaction.plot(npk$block, npk$N, npk$yield)
+
+par(mfrow=c(1,2))
+lm_aov1 = lm(yield ~ block * N, data = npk)
+aov1 = anova(lm_aov1)
+print(aov1)
+qqnorm(residuals(lm_aov1))
+plot(fitted(lm_aov1),residuals(lm_aov1))
+summary(lm_aov1)
+# for (i in 1:2){
+#   hist(npk[[i]])
+#   boxplot (npk[[i]])
+#   qqnorm(npk[[i]])
+#   qqline()
+#   print(shapiro.test(npk[[i]]))
+# }
+```
+
+Block has a significant main effect on yield. However, there does not appear to be an interaction effect of block x N on yield. Therefore, it does not affect our research question about the effect of N on yield.
+[FRIEDMANN TEST?]
+
+**d)**
+```{r}
+# test assumptions for one model? 
+
+models <- list(
+  lm(yield ~ block * N + P + K, npk),
+  lm(yield ~ block * P + K + N, npk),
+  lm(yield ~ block * K + N + P, npk)
+)
+aovs <- vector("list", 3)
+
+for (i in 1:length(models)){
+  aovs[[i]] <- anova(models[[i]])
+  print(aovs[[i]])
+}
+```
+**e)**
+```{r}
+library(lme4)
+
+shapiro = check_assumptions("yield", npk, groups = c("N","block"))
+model <- lmer(yield ~ (1|block) * N, REML=FALSE, data = npk)
+print(summary(model))
+anova(model)
+
+```

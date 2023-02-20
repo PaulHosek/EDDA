@@ -1,0 +1,31 @@
+---
+title: "Assignment 1"
+author: 'Group 47: Luca Cavellini, Paul Hosek, Robert Satzger'
+date: "2/20/2023"
+output:
+  pdf_document: default
+  html_document: default
+fontsize: 11pt
+highlight: tango
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
+```
+
+# Preparation: Defining Re-Usable Assumption Checks
+To standardize assumption checks throughout the assignment, we use the following function. It plots the histogram, qq-plot, and boxplots for all variables of interest and returns the shapiro-wilk test.
+
+```{r, code = readLines("../utilities.R")}
+```
+
+```{r child = 'w1ex1.Rmd'}
+```
+
+```{r child = 'w1ex2.Rmd'}
+```
+
+```{r child = 'w1ex3.Rmd'}
+```
+
+```{r child = 'w1ex4.Rmd'}
+```
