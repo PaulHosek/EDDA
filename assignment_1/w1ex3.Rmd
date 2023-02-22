@@ -8,7 +8,7 @@ output: html_document
 source("../utilities.R")
 ```
 
-# Exercise 3
+# Exercise 3. Diet
 
 ```{r}
 library(ggplot2)
@@ -17,9 +17,6 @@ library(ggpubr)
 ```
 
 **a)**
-- graphical summary
-- test claim of diet affecting weight loss
-  - check assumptions of test
 
 ```{r, echo=TRUE}
 data <- read.table("data/diet.txt", header=TRUE)
@@ -36,18 +33,17 @@ data$weight.lost <- data$preweight - data$weight6weeks
 
 ```{r, echo=FALSE}
 
-# ggplot(data, aes(x = weight.lost, fill = diet)) +
-#   geom_histogram(alpha = 1, position = "stack", bins = 10) +
-#   labs(title = "Graphical summary: Effect of diet on weight loss"
-#        , x = "Weight Lost", y = "Frequency", fill = "Diet")
+ggplot(data, aes(x = weight.lost, fill = diet)) +
+  geom_histogram(alpha = 1, position = "stack", bins = 10) +
+  labs(title = "Graphical summary: Effect of diet on weight loss"
+       , x = "Weight Lost", y = "Frequency", fill = "Diet")
 ```
 
 To test if the diet has a general effect on weight loss, we can do a paired t-test. Here, we test if there is a significant weight loss between the measurements.
 
 First, testing the assumption of normality, we see that it is met. The data follows approximately a normal distribution
 ```{r, echo=TRUE}
-shapiro <- check_assumptions("weight.lost", data, "diet")
-# qqnorm(data$weight.lost); qqline(data$weight.lost)
+shapiro <- check_normality("weight.lost", data, "diet")
 ```
 Upon visual inspection, the assumption of a normal distribution appears to be met. The Shapiro-Wilk test does not find a violation of the normality assumption, either, with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$.
 
@@ -112,14 +108,12 @@ kruskal.test(weight.lost ~ diet, data)
 **c)**
 ```{r, echo=TRUE}
 two_w_anova <- lm(weight.lost ~ diet * gender, data)
-check_assumptions("weight.lost", data, list("gender", "diet"), anova_model = two_w_anova)
+check_normality("weight.lost", data, list("gender", "diet"))
+
+check_vars(two_w_anova)
 print(anova(two_w_anova))
 ```
-
-**d)**
-```{r, echo=TRUE}
-
-```
+**e)**
 
 ```{r, echo=TRUE}
 

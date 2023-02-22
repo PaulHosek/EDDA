@@ -9,11 +9,19 @@ fontsize: 11pt
 highlight: tango
 ---
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE, fig.height = 3)
+
+# setting standard R plot themes to be used by ggplots
+library(ggplot2)
+theme_set(theme(
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(),
+  panel.background = element_blank(), 
+  axis.line = element_line(colour = "black"))) 
 ```
 
 # Preparation: Defining Re-Usable Assumption Checks
-To standardize assumption checks throughout the assignment, we use the following function. It plots the histogram, qq-plot, and boxplots for all variables of interest and returns the shapiro-wilk test.
+To standardize assumption checks throughout the assignment, we use the following functions. `check_normality` plots the histogram, qq-plot, and boxplots for all variables of interest and returns the shapiro-wilk test. `check_vars` extends assumption checks for ANOVAs by showing the qq-plot of the residuals and plotting the fitted values against the residuals.
 
 ```{r, code = readLines("../utilities.R")}
 ```
