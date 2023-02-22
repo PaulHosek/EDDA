@@ -5,7 +5,7 @@ date: "2023-02-17"
 output: pdf_document
 ---
 
-# Exercise 2
+# Exercise 2. Cholesterol
 
 ```{r, include=FALSE}
 source("../utilities.R")
@@ -25,8 +25,8 @@ approximately normally distributed. Further, QQ-plots indicate that samples
 from both measurements are similarly distributed by inspection.
 However, we need to confirm this with thorough statistical testing. 
 
-```{r, echo=TRUE}
-shapiros <- check_assumptions(list("Before", "After8weeks"), data)
+```{r, echo=TRUE, fig.height = 4}
+shapiros <- check_normality(list("Before", "After8weeks"), data)
 # data_long <- data.frame(
 #   Time = rep(c("Before", "After 8 Weeks"), each = nrow(data)),
 #   Value = c(data$Before, data$After8weeks)
@@ -43,7 +43,7 @@ before measurement and  $p = `r sprintf('%.2f',shapiros[[2]]$p.value)`$ for the 
 
 
 Further, we observe a very high correlation of the data.
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.height = 2.5}
 
 ggscatter(data, x = colnames(data)[1], y = colnames(data)[2],
           add = "reg.line",cor.coef = TRUE, conf.int = TRUE,

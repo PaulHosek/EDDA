@@ -9,14 +9,14 @@ output: html_document
 source("../utilities.R")
 ```
 
-# Exercise 1
+# Exercise 1. Birthweights
 **a)**
 
 To test for a normal distribution of the sample, the output below show a histogram, a Q-Q plot, and a Shapiro-Wilk test.
 ```{r}
 library(ggplot2)
 birthweight <- read.table('data/birthweight.txt', header = TRUE)
-shapiro <- check_assumptions("birthweight", birthweight)
+shapiro <- check_normality("birthweight", birthweight)
 ```
 
 The histogram appears to have a bell-shaped curve with no dominant skew to either side, suggesting a normal distribution of the sample data. This is also supported by the roughly linear shape displayed in the Q-Q plot. Moreover, the Shapiro-Wilk test for normality is not significant with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$. Thus, we cannot reject the null hypothesis stating that the sample differs from a normal distribution. Based on these three indications, we therefore assume that the birth weights follow a normal distribution.
