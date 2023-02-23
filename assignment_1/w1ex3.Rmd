@@ -106,15 +106,39 @@ kruskal.test(weight.lost ~ diet, data)
 ```
 
 **c)**
+
+Before performing a two-way ANOVA, we run normality and variance checks on the lost weight.
+
+```{r, echo=TRUE}
+shapiro <- check_normality("weight.lost", data, list("gender", "diet"))
+```
+
+Based on the plots, the data appear to be normally distributed. The Shapiro-Wilk test also does not find a violation of the normality assumption, with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$. Further, we check the assumption of a homogeneity of variances.
+
 ```{r, echo=TRUE}
 two_w_anova <- lm(weight.lost ~ diet * gender, data)
-check_normality("weight.lost", data, list("gender", "diet"))
-
 check_vars(two_w_anova)
-print(anova(two_w_anova))
 ```
-**e)**
+
+The qq-plot shows slight deviations of the residuals' sample quantiles from the theoretical quantiles. Thus, the interpretations of the ANOVA may be impacted. Nonetheless, we will proceed with the ANOVA for the purposes of the exercise.
+
+To decide whether the model should contain an interaction term, we plot the means of lost weight by gender and diet.
 
 ```{r, echo=TRUE}
-
+par(mfrow=c(1,2))
+interaction.plot(data$diet, data$gender, data$weight.lost)
+interaction.plot(data$gender, data$diet, data$weight.lost)
 ```
+
+As the non-parallel lines in the plots suggest, we can assume an interaction of diet and gender on lost weight. 
+
+```{r}
+anova_res <- anova(two_w_anova)
+print(anova_res)
+```
+
+The full two-way ANOVA results in an interaction effect of diet and gender on lost weight ($p = `r sprintf('%.3f',anova_res["diet:gender","Pr(>F)"])`$). Additionally, the analysis finds a main effect of diet on lost weight ($p = `r sprintf('%.3f',anova_res["diet","Pr(>F)"])`$) while a main effect of gender was not present ($p = `r sprintf('%.2f',anova_res["gender","Pr(>F)"])`$).
+
+**e)**
+
+[EVALUATE B VS C]

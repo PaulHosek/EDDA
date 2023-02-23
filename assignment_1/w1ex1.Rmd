@@ -19,7 +19,7 @@ birthweight <- read.table('data/birthweight.txt', header = TRUE)
 shapiro <- check_normality("birthweight", birthweight)
 ```
 
-The histogram appears to have a bell-shaped curve with no dominant skew to either side, suggesting a normal distribution of the sample data. This is also supported by the roughly linear shape displayed in the Q-Q plot. Moreover, the Shapiro-Wilk test for normality is not significant with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$. Thus, we cannot reject the null hypothesis stating that the sample differs from a normal distribution. Based on these three indications, we therefore assume that the birth weights follow a normal distribution.
+The histogram appears to have a bell-shaped curve with no dominant skew to either side, suggesting a normal distribution of the sample data. This is also supported by the roughly linear shape displayed in the Q-Q plot. Moreover, the Shapiro-Wilk test for normality is not significant with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$. Thus, we cannot reject the null hypothesis stating that the sample differs from a normal distribution. Based on these three indications, we therefore assume that the birthweights follow a normal distribution.
 
 ```{r}
 birthweight <- birthweight$birthweight
@@ -37,6 +37,7 @@ ci_length = 100
 margin = ci_length / 2 
 q = qnorm(1-alpha/2) # approximating with z-scores instead of t-values because t-distribution depends on sample size itself
 n = q^2 * sd(birthweight)^2 / margin^2 
+ceiling(n)
 ```
 Ensuring a confidence interval with a maximum length of 100 requires a sample size $n \geq `r ceiling(n)`$.
 
@@ -60,21 +61,31 @@ The 96% confidence interval resulting from bootstrapping is $CI = [`r sprintf('%
 Based on the assumption of normality established in part **a**, we perform a right-sided one-sample t-test.
 ```{r}
 mu = 2800
-t.test(birthweight, mu = mu, alternative = 'g')
-binom.test(sum(birthweight>mu),length(birthweight),p=.5,alt='g')
+ttest <- t.test(birthweight, mu = mu, alternative = 'g')
+print(ttest)
+```
+The t-test returns $p = `r sprintf('%.3f',ttest$p.value)`$. This means we reject the null hypothesis $H0: \mu <= 2800$. The expert's claim is therefore justified. Moreover, the given confidence interval suggests that the population mean lies anywhere higher than `r sprintf('%.2f',ttest$conf.int[[1]])`. It has a chance of containing the population mean of 95%. The undefined upper boundary (displayed as "Inf") is a consequence of the right-sided test - we are only interested in the lower boundary of the CI.
+
+Alternatively, the claim can be tested with a sign test by comparing the proportion of birth weights above 2800 to $H0: p \leq 0.5$.
+
+```{r}
+binomtest <- binom.test(sum(birthweight>mu),length(birthweight),p=.5,alt='g')
+print(binomtest)
 ```
 
-**c)** 
-REFINE!
-The power of the two tests can be compared by simulation. 
-In this case, the alternative hypothesis is true, stating that the true mean is above 2800. 
-Therefore, one approach would be to randomly sample a mean from a normal distribution with mu in the interval $I = (2800, max(birthweight)]$.
-With this mean, one could produce a sample $X^\ast$ and perform each of the two statistical tests, testing its sample mean $\overline{X}^\ast$ against the hypothesis that the true mean is above 2800.  
-Consequently, one can calculate the proportion of times each test correctly rejected the null hypothesis. 
+Based on the p-value of $p = `r sprintf('%.3f',binomtest$p.value)`$, we can reject the null hypothesis. In accordance with the t-test, the binomial test supports the expert's claim.
 
-It can be expected that the t-test will have a higher power than the sign test because it correctly assumes a normal distribution of the sample. In contrast, the sign test discards a lot of information. This makes it more robust than the t-test but reduces power in cases where assumptions aren't violated.
+**c)** 
+
+The power of the two tests can be compared by simulation.
+To do so, one needs to repeatedly sample a normal distribution lying within the alternative hypothesis (with $\mu > 2800$). Each of the samples $X^\ast_b$ then produce a sample mean $\overline{X}^\ast_b$ which is tested against the true mean with both the t-test and the sign test.
+Finally, the power of each test is found by calculating the proportions of times each test correctly rejected the null hypothesis.
+
+It can be expected that the t-test will have a higher power than the sign test because it correctly assumes a normal distribution of the sample. In contrast, the sign test discards a lot of information. This makes it more robust than the t-test but reduces power in cases like these where assumptions aren't violated.
 
 **d)**
+
+Deriving the point estimate $\hat{p}$ from our sample, we can use the margin of error to compute the right side of the confidence interval. 
 ```{r, collapse=TRUE}
 p_hat = sum(birthweight<2600)/length(birthweight)
 p_left = .25
@@ -84,10 +95,12 @@ z = me/sqrt(p_hat*(1-p_hat)/length(birthweight)) # z of alpha/2
 conf_level = 1-pnorm(z, lower.tail = FALSE)*2
 ```
 
-Taking our sample proportion as $\hat{p}$, we can use the margin of error to compute the right side of the confidence interval. This results in the confidence interval $CI = [`r sprintf('%.2f',p_left)`,`r sprintf('%.2f',p_right)`]$. The interval has a confidence level of $`r sprintf('%.0f',conf_level*100)`\%$.
+This results in the confidence interval $CI = [`r sprintf('%.2f',p_left)`,`r sprintf('%.2f',p_right)`]$. The interval has a confidence level of $`r sprintf('%.0f',conf_level*100)`\%$.
+
 
 **e)**
-The problem can be seen as a comparison of proportions between two independent samples.
+
+The problem is similar to a sign test in which the first step of finding the test statistic $T = \#(X_i < \mu)$ has already been performed. 
 ```{r}
 k_male = 34
 k_female = 28
