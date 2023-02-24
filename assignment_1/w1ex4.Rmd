@@ -9,6 +9,7 @@ output: html_document
 source("../utilities.R")
 ```
 
+
 # Exercise 4. Yield of peas
 **a)**
 ```{r, include = F}
@@ -80,48 +81,39 @@ The model without the interaction term and with the interaction term both draw a
 The Friedman test is not applicable in this case because there are two observations of the outcome variable (yield) per block x Nitrogen combination. In contrast, the Friedman test only applies to situations with 1 observation per factor combination.
 
 **d)**
-
 ```{r}
+# Define the models
 models <- list(
   lm(yield ~ block * N + P + K, npk),
   lm(yield ~ block * N + K, npk),
-  lm(yield ~ block * P + K + N, npk),
-  lm(yield ~ block * K + N + P, npk),
   lm(yield ~ block * N + P, npk),
-  lm(yield ~ block * N, npk)
+  lm(yield ~ block * N, npk),
+  lm(yield ~ block + N, npk),
+  
+  lm(yield ~ block * P + K + N, npk),
+  lm(yield ~ block * K + N + P, npk)
 )
-aovs <- vector("list", 3)
 
-for (i in 1:length(models)){
-  aovs[[i]] <- anova(models[[i]])
-  # print(aovs[[i]])
-}
+result_matrix <- matrix("-",nrow = 8, ncol = length(models), dimnames = list(c("Sum of Squares","block", "N", "P", "K","block:N","block:P","block:K"), paste0("model", 1:length(models))))
 
-aov <- aovs[[1]]
-            
-rnames <- row.names(aov)
-rnames <- rnames[rnames != "Residuals"]
-signif <- aov[rnames,"Pr(>F)"]<.05
-signif <- row.names(aov[signif,])
-signif <- signif[signif != "Residuals"]
-
-all <- c("block", "N", "P", "K", "interaction")
-lst <- vector("list")
-counter = 0
-for (f in all){
-  counter <- counter + 1
-  if (f %in% signif){
-    lst[counter] <- cat(f,"*")
-  }
-  if (f %in% rnames){
+# loop through each model
+for (i in 1:length(models)) {
+  anova_table <- anova(models[[i]])
+  terms_in_model <- attr(terms(models[[i]]), "term.labels")
+  count_terms <- 1
+  for (term in terms_in_model){
     
+    result_matrix[term, i] <- ifelse(anova_table[count_terms, "Pr(>F)"] < 0.05, paste0(term, "*"), term)
+    count_terms <- count_terms+1
   }
+  result_matrix["Sum of Squares", i] <- round(anova(models[[i]])[nrow(anova(models[[i]])), "Sum Sq"],2)
+
 }
-print(signif)
-cat()
-aovs[[1]][rnames,"N"]
+
+result_matrix
+
 ```
-[WHICH MODEL IS BEST?]
+Our result table compare different models. For each possible term in the model, we indicated whether the term is part of the model by writing the term in the cell (e.g., N) or not ("-"). Further, if the term was significant it is written with an asterisk (e.g., K*). As such, we can reconstruct how each model looks from this table. We also provide the Sum of Square of the model as an indicator of model fit. We can see that dropping P from the model between models 1 and 2 reduces model fit much less than dropping K (model3). Further, model 1 and 2 have the best fit. We also observer that if we drop the interaction term from the model (model5), model fit severely suffers. Based on our previous analysis and the current observations (and Occam's razor), we prefer model 2. Model 2 does not include P (potassium), so it is much more parsimonious. If predictions must be as precise as possible and measuring potassium is not a lot of work, model 1 should be preferred instead.
 
 
 **e)**
