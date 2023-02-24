@@ -94,7 +94,7 @@ models <- list(
   lm(yield ~ block * K + N + P, npk)
 )
 
-result_matrix <- matrix("-",nrow = 8, ncol = length(models), dimnames = list(c("Sum of Squares","block", "N", "P", "K","block:N","block:P","block:K"), paste0("model", 1:length(models))))
+result_matrix <- matrix("-",nrow = 8, ncol = length(models), dimnames = list(c("Residual sum of Squares","block", "N", "P", "K","block:N","block:P","block:K"), paste0("model", 1:length(models))))
 
 # loop through each model
 for (i in 1:length(models)) {
@@ -106,7 +106,7 @@ for (i in 1:length(models)) {
     result_matrix[term, i] <- ifelse(anova_table[count_terms, "Pr(>F)"] < 0.05, paste0(term, "*"), term)
     count_terms <- count_terms+1
   }
-  result_matrix["Sum of Squares", i] <- round(anova(models[[i]])[nrow(anova(models[[i]])), "Sum Sq"],2)
+  result_matrix["Residual sum of Squares", i] <- round(anova(models[[i]])[nrow(anova(models[[i]])), "Sum Sq"],2)
 
 }
 
