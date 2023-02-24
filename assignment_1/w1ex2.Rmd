@@ -27,14 +27,6 @@ However, we need to confirm this with thorough statistical testing.
 
 ```{r, echo=TRUE, fig.height = 4}
 shapiros <- check_normality(list("Before", "After8weeks"), data)
-# data_long <- data.frame(
-#   Time = rep(c("Before", "After 8 Weeks"), each = nrow(data)),
-#   Value = c(data$Before, data$After8weeks)
-# );
-# ggplot(data_long, aes(x = Value, fill = Time)) +
-#   geom_histogram(alpha = 0.5, position = "identity", bins = 10) +
-#   labs(title = "Histogram of Before and After 8 Weeks", x = "Values", y = "Frequency") +
-#   scale_fill_manual(values = c("#E69F00", "#56B4E9"), labels = c("Before", "After 8 Weeks"));
 ```
 
 Shapiro-Wilk tests for normality indicate that the assumption of normality
@@ -42,7 +34,7 @@ is met for both pre- and post-measurement. P-values are $p = `r sprintf('%.2f',s
 before measurement and  $p = `r sprintf('%.2f',shapiros[[2]]$p.value)`$ for the post measurement respectively.
 
 
-Further, we observe a very high correlation of the data.
+Further, we observe a very high correlation of the data. The Pearson correlation coefficient is $r = 0.99$ with significant correlation of pre and post measurement $p = 0.99$.
 ```{r, echo=TRUE, fig.height = 2.5}
 
 ggscatter(data, x = colnames(data)[1], y = colnames(data)[2],
@@ -52,32 +44,43 @@ ggscatter(data, x = colnames(data)[1], y = colnames(data)[2],
 
 ```
 
+
+
 **b)**
-First, we use a non-parametric, repeated measures t-test.
+Since both measurements are taken from the same experimental units, we perform two paired samples tests. Based on the assumption of normality in **a**, we perform a dependent, two-samples t-test. For comparison, we also perform a non-parametric alternative: The Mann-Whitney rank-based test.
+
 ```{r, echo=TRUE}
-t.test(data$Before, data$After8weeks, paired = TRUE, alternative = "two.sided");
-```
-```{r, echo=TRUE}
-wilcox.test(data$Before, data$After8weeks, paired = TRUE, alternative = "two.sided");
+ttest <- t.test(data$Before, data$After8weeks, paired = TRUE, alternative = "two.sided");
+print(ttest)
+
+wilcoxtest <- wilcox.test(data$Before, data$After8weeks, 
+                          paired = TRUE, alternative = "two.sided");
+print(wilcoxtest)
 ```
 
-The results indicate, that at $\alpha =0.05$, there is a significant effect
-of the diet. However, this must not implyeffect has practical significance and
-is strong enough for the diet to be useful in practice.
+Both the t-test and the Mann-Whitney test concur in that there is a significant effect of the diet on weight, with $p = `r sprintf('%.2f',ttest$p.value)`$ and $p = `r sprintf('%.2f',wilcoxtest$p.value)`$, respectively. However, the statistical effect does not imply a large effect size. Therefore, the practical utility of the diet is not necessarily given.
 
-The permutation test is applicable, since it can express any test-statistic
-including repeated measures and also is non-parameteric.
+The permutation test is applicable, since we have a test statistic that expresses a difference between dependent measures. While the assumption of normality is met in this case, the permutation test would also apply in case of a violation of this assumption.
 
 **c)**
+
+Based on the Central Limit Theorem, we know that the test statistic of any distribution will be normally distributed as we resample.
+
 ```{r, echo=TRUE}
 nsamples <- 1000;
 
 theta <- replicate(nsamples, max(sample(data$After8weeks,size=18, replace = TRUE)));
-cat("The confidence interval of the max is:",quantile(theta, c(0.025, 0.975)),"\n");
+Tstar25=quantile(theta,0.025)
+Tstar975=quantile(theta,0.975)
+T1 = max(data$After8weeks)
+CI = c(2*T1-Tstar975,2*T1-Tstar25)
+print(CI)
 ```
+
+The confidence interval is $CI = [`r sprintf('%.2f',CI[[1]])`,`r sprintf('%.2f',CI[[2]])`]$.
+
 This confidence interval could be improved by resampling more often.
-However, since the sample size is only 18, conclusions about the true population
-mean are limited. As such, we recommend to collect more samples.
+However, since the sample size is only 18, conclusions about the true population mean are limited. As such, we recommend to collect more data.
 
 **d)**
 ```{r, echo=TRUE}
@@ -96,12 +99,17 @@ plot(thetas, p_vals, type = "l", xlab = "theta", ylab = "p-value");
 abline(h = 0.05, col = "red");
 legend("topright", legend = c("p-value", "0.05"),
        col = c("black", "red"), lty = c(1, 1));
+t <- thetas[p_vals >.05]
+I <- c(min(t), max(t))
+print(I)
 ```
+The thetas for which the hypothesis is not rejected lie in the interval $I = [`r sprintf('%.2f', I[[1]])`,`r sprintf('%.2f',I[[2]])`]$.
+
 Alternatively, we can use the Kolmogorov-Smirnov test to test if 
 the distributions are the same. But we must be careful to not accept
-distributions with a maximum value smaller than the maximum of the sample,
-because else the maximum lies outside the given range.
-```{r, echo=TRUE, console=FALSE}
+distributions with a maximum value smaller than the maximum of the sample, because else the maximum lies outside the given range.
+
+```{r, echo=TRUE, console=FALSE, warning = F}
 thetas <- seq(3, 12, by = .01);
 
 # Loop over theta values and perform bootstrap test
@@ -126,16 +134,19 @@ legend("topright", legend = c("p-value", "0.05"),
 
 ```{r, echo=TRUE}
 binom_e <- binom.test(sum(data$After8weeks < 6), nrow(data), alternative = "less")
-cat("The p-value does not reject the H0 at alpha=0.05: p-value =",binom_e$p.value)
 ```
+
+The binomial test returns an insignificant p-value of $p = `r sprintf('%.2f', binom_e$p.value)`$. Therefore, we cannot reject the null hypothesis stating that the median post measurement is less than 6.
+
 First, we find true fraction of cholesterol levels less than 4.5. 
-```{r, echo=TRUE}
-prop <- mean(data$After8weeks < 4.5)
-cat("The fraction of cholesterol levels <4.5 is", prop, "..")
-
-```
 
 ```{r, echo=TRUE}
-binom_e <- binom.test(sum(data$After8weeks < 4.5), nrow(data), p = 0.25, alternative = "less")
-cat("No, the fraction <4.5 is not less than 25%, with p=",binom_e$p.value)
+binom_e1 <- binom.test(sum(data$After8weeks < 4.5), nrow(data), 
+                       p = 0.25, alternative = "l")
+print(binom_e1)
+binom_e2 <- binom.test(sum(data$After8weeks < 4.5), nrow(data), 
+                       p = 0.2500001, alternative = "l")
+print(binom_e2)
 ```
+
+With the null hypothesis H0: p >= 0.25, the binomial test returns an insignificant p-value of $p = `r sprintf('%.2f', binom_e1$p.value)`$. However, the alternative hypothesis should include the value 0.25. Therefore, we corroborated our findings with a second test, including the value 0.25. Therefore, we can not confirm the claim that the fraction of cholesterol levels less than 4.5 is at most 25%. 

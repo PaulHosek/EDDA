@@ -11,9 +11,11 @@ source("../utilities.R")
 
 # Exercise 4. Yield of peas
 **a)**
-```{r}
+```{r, include = F}
 library(MASS)
+```
 
+```{r}
 random_plots <- cbind(
   rep(1:24),
   rep(1:6, each = 4),
@@ -23,7 +25,6 @@ plots_df <- data.frame(random_plots)
 header <- c("plot", "block", "N", "P", "K")
 colnames(plots_df) <- header
 plots_df[1:8,]
-
 ```
 
 **b)**
@@ -31,37 +32,17 @@ plots_df[1:8,]
 The following plots show the average yield per block for plots treated with or without Nitrogen (N).
 
 ```{r, echo=FALSE}
-# library(dplyr)
-# library(ggplot2)
-# npk %>%
-#   group_by(block, N) %>% 
-#   summarize(mean_yield = mean(yield),
-#             sd_yield = sd(yield)
-#             ) %>%
-#   ggplot(aes(x=block, y = mean_yield, fill=N)) +
-#     geom_col(position=position_dodge())+
-#     geom_errorbar(
-#       aes(
-#         ymin= mean_yield - sd_yield, 
-#         ymax = mean_yield + sd_yield
-#       ),
-#       width=.2,
-#       position=position_dodge(.9)
-#       )+
-#     scale_fill_grey(start = 0.6,
-#   end = .8)
-
+attach(npk)
 par(mfrow=c(1,2))
-interaction.plot(npk$block,npk$N,npk$yield)
-interaction.plot(npk$N,npk$block,npk$yield)
-  
+interaction.plot(block,N,yield)
+interaction.plot(N,block,yield)
 ```
-The study generally follows an incomplete block design. This would suggest interactions cannot be evaluated. However, taking only the factors block and N into account, there are two observations per condition. This means, the interactions may be evaluated with caution.
-The plots suggest that the treatment effect (i.e., the effect of Nitrogen on yield) may differ between blocks. Taking this potential interaction of block and Nitrogen into account can help explain some of the variance in the treatment effect. Therefore, it can help improve the model fit. By performing a full two-way ANOVA, we can test whether the interaction is, in fact, present.
+It is noteworthy that the study generally follows an incomplete block design. This would suggest interactions cannot be evaluated. However, taking only the factors block and N into account, there are two observations per condition. This means, the interactions may be evaluated.
+
+Even though the yield is consistently higher for plots treated with Nitrogen, the size of this effect may differ between blocks. Taking this potential interaction of block and Nitrogen into account can help explain some of the variance in the treatment effect. Therefore, it can help improve the model fit. By performing a full two-way ANOVA, we can test whether the interaction is, in fact, present.
 
 **c)**
 
-[FIXED EFFECTS VS FULL ANOVA?...]
 To perform an ANOVA, we first check the normality assumption with the following plots.
 
 ```{r}
@@ -76,40 +57,69 @@ Second, we check for homogeneity of variances.
 lm_aov1 = lm(yield ~ block * N, data = npk)
 check_vars(lm_aov1)
 ```
-[DOES NOT SEEM TO BE MET...
-Suggestions in slides:
-Otherwise, you may consider
-transforming the data (e.g. use log Y );
-using a different test;
-omit some (outlying) data-points (careful!);
-something else (there is no fix that always works).
-]
+The Q-Q plot of the residuals indicates a violation of the assumption of homogeneity of variances. Therefore, we drop the interaction term from the model.
+
+```{r}
+lm_aov12 = lm(yield ~ block + N, data = npk)
+check_vars(lm_aov12)
+```
+
+With the removal of the interaction term, equal variances may be assumed. For completeness, we will proceed with both models.
 
 ```{r}
 aov1 = anova(lm_aov1)
+print("Anova without interaction term.")
 print(aov1)
+aov2 = anova(lm_aov12)
+print("")
+print("Anova with the interaction term.")
+print(aov2)
 ```
+The model without the interaction term and with the interaction term both draw a similar picture. There does not appear to be an interaction effect of block x Nitrogen on yield. Therefore, block does not affect our research question about the effect of Nitrogen on yield. A more sensible way to take block into account in the analysis would be in an additive model.
 
-There does not appear to be an interaction effect of block x Nitrogen on yield. Therefore, block does not affect our research question about the effect of Nitrogen on yield. A more sensible way to take block into account in the analysis would be in an additive model.
-
-The Friedman test is not applicable in this case because there are two observations of the outcome variable (yield) per block x Nitrogen combination.
+The Friedman test is not applicable in this case because there are two observations of the outcome variable (yield) per block x Nitrogen combination. In contrast, the Friedman test only applies to situations with 1 observation per factor combination.
 
 **d)**
-
-[TEST ASSUMPTIONS FOR ONE MODEL?; TESTS DO NOT MAKE MUCH SENSE...]
 
 ```{r}
 models <- list(
   lm(yield ~ block * N + P + K, npk),
+  lm(yield ~ block * N + K, npk),
   lm(yield ~ block * P + K + N, npk),
-  lm(yield ~ block * K + N + P, npk)
+  lm(yield ~ block * K + N + P, npk),
+  lm(yield ~ block * N + P, npk),
+  lm(yield ~ block * N, npk)
 )
 aovs <- vector("list", 3)
 
 for (i in 1:length(models)){
   aovs[[i]] <- anova(models[[i]])
-  print(aovs[[i]])
+  # print(aovs[[i]])
 }
+
+aov <- aovs[[1]]
+            
+rnames <- row.names(aov)
+rnames <- rnames[rnames != "Residuals"]
+signif <- aov[rnames,"Pr(>F)"]<.05
+signif <- row.names(aov[signif,])
+signif <- signif[signif != "Residuals"]
+
+all <- c("block", "N", "P", "K", "interaction")
+lst <- vector("list")
+counter = 0
+for (f in all){
+  counter <- counter + 1
+  if (f %in% signif){
+    lst[counter] <- cat(f,"*")
+  }
+  if (f %in% rnames){
+    
+  }
+}
+print(signif)
+cat()
+aovs[[1]][rnames,"N"]
 ```
 [WHICH MODEL IS BEST?]
 
