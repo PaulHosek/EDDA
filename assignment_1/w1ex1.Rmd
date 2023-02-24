@@ -25,12 +25,14 @@ The histogram appears to have a bell-shaped curve with no dominant skew to eithe
 birthweight <- birthweight$birthweight
 alpha = .04
 t = qt(1-alpha/2, df = length(birthweight)-1) # t of alpha/2
+
 margin = t * sd(birthweight) / sqrt(length(birthweight)) 
 lower_bound = mean(birthweight) - margin
 upper_bound = mean(birthweight) + margin
 ```
 Based on our sample, the 96\% confidence interval for $\mu$ is $CI = [`r sprintf('%.2f',lower_bound)`,`r sprintf('%.2f',upper_bound)`]$.
 
+To obtain the minimal sample size for a confidence interval of length 100, we use the z-distribution as an approximation for the t-distribution as the t-distribution would rely on the sample size.
 ```{r}
 alpha = .04
 ci_length = 100
@@ -64,7 +66,7 @@ mu = 2800
 ttest <- t.test(birthweight, mu = mu, alternative = 'g')
 print(ttest)
 ```
-The t-test returns $p = `r sprintf('%.3f',ttest$p.value)`$. This means we reject the null hypothesis $H0: \mu <= 2800$. The expert's claim is therefore justified. Moreover, the given confidence interval suggests that the population mean lies anywhere higher than `r sprintf('%.2f',ttest$conf.int[[1]])`. It has a chance of containing the population mean of 95%. The undefined upper boundary (displayed as "Inf") is a consequence of the right-sided test - we are only interested in the lower boundary of the CI.
+The t-test returns $p = `r sprintf('%.3f',ttest$p.value)`$. This means we reject the null hypothesis $H0: \mu <= 2800$. The expert's claim is therefore justified. Moreover, the given confidence interval suggests that the population mean lies anywhere higher than `r sprintf('%.2f',ttest$conf.int[[1]])`. In 95% of replications, it will contain the population mean. The undefined upper boundary (displayed as "Inf") is a consequence of the right-sided test - we are only interested in the lower boundary of the CI.
 
 Alternatively, the claim can be tested with a sign test by comparing the proportion of birth weights above 2800 to $H0: p \leq 0.5$.
 
@@ -91,16 +93,15 @@ p_hat = sum(birthweight<2600)/length(birthweight)
 p_left = .25
 me = p_hat - p_left
 p_right = p_hat + me
-z = me/sqrt(p_hat*(1-p_hat)/length(birthweight)) # z of alpha/2
-conf_level = 1-pnorm(z, lower.tail = FALSE)*2
+z = (p_left - p_hat) / sqrt(p_hat*(1-p_hat)/length(birthweight))
+conf_level = 1-pnorm(z)*2
 ```
 
 This results in the confidence interval $CI = [`r sprintf('%.2f',p_left)`,`r sprintf('%.2f',p_right)`]$. The interval has a confidence level of $`r sprintf('%.0f',conf_level*100)`\%$.
 
-
 **e)**
 
-The problem is similar to a sign test in which the first step of finding the test statistic $T = \#(X_i < \mu)$ has already been performed. 
+Since we are not given the distribution of birth weights by gender, we cannot perform a test for difference in means. Thus, we perform a test for difference in proportions. 
 ```{r}
 k_male = 34
 k_female = 28
@@ -108,7 +109,8 @@ n_male = k_male + 61
 n_female = k_female + 65
 p_female = k_female/n_female
 
-binom_test = binom.test(k_male, n_male, p=p_female)
+proptest = prop.test(c(k_male,k_female), c(n_male, n_female))
+print(proptest)
 ```
 
-The binomial test returns $p = `r sprintf('%.2f',binom_test$p.value)`$. Since it is larger than the standard significance level $\alpha = 0.05$, we reject the null hypothesis stating that the two proportions are significantly different. Thus, the expert's claim is not supported by the data.
+The proportion test returns $p = `r sprintf('%.2f',proptest$p.value)`$. Since it is larger than the standard significance level, we reject the null hypothesis stating that the two proportions are significantly different. Thus, the expert's claim is not supported by the data.

@@ -10,7 +10,7 @@ source("../utilities.R")
 
 # Exercise 3. Diet
 
-```{r}
+```{r, include=FALSE}
 library(ggplot2)
 library(dplyr)
 library(ggpubr)
@@ -21,17 +21,8 @@ library(ggpubr)
 ```{r, echo=TRUE}
 data <- read.table("data/diet.txt", header=TRUE)
 data$diet <- factor(data$diet)
+data$gender <- factor(data$gender)
 data$weight.lost <- data$preweight - data$weight6weeks
-```
-
-```{r, echo=TRUE}
-# Assuming your data frame is called `mydata`
-# boxplot(weight.lost ~ diet, data = data, xlab = "Diet", ylab = "Weight Lost",
-#         main = "Graphical summary: Effect of diet on weight loss")
-
-```
-
-```{r, echo=FALSE}
 
 ggplot(data, aes(x = weight.lost, fill = diet)) +
   geom_histogram(alpha = 1, position = "stack", bins = 10) +
@@ -41,46 +32,49 @@ ggplot(data, aes(x = weight.lost, fill = diet)) +
 
 To test if the diet has a general effect on weight loss, we can do a paired t-test. Here, we test if there is a significant weight loss between the measurements.
 
-First, testing the assumption of normality, we see that it is met. The data follows approximately a normal distribution
+First, we test whether the normality assumption is met.
+
 ```{r, echo=TRUE}
 shapiro <- check_normality("weight.lost", data, "diet")
 ```
-Upon visual inspection, the assumption of a normal distribution appears to be met. The Shapiro-Wilk test does not find a violation of the normality assumption, either, with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$.
+Upon inspection of the histogram and the Q-Q plot, the assumption of a normal distribution appears to be met. The Shapiro-Wilk test does not find a violation of the normality assumption, either, with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$.
 
-Further, the assumption of a linear relationship of the independent and dependent variables is met. The data spreads evenly around the the fitted linear line and does not follow a higher order interaction.
-```{r, echo=TRUE}
-
+<!-- Further, the assumption of a linear relationship of the independent and dependent variables is met. The data spreads evenly around the the fitted linear line and does not follow a higher order interaction. -->
+```{r, echo=TRUE, include = FALSE}
 plot(data$preweight, data$weight6weeks, main = "Testing for a linear relationship", xlab = "Preweight", ylab = "Post-weight")
 abline(lm(data$weight6weeks ~ data$preweight), col = "red")
 legend("bottomright", legend = "Fitted linear relationship", col = "red", lty = 1)
 ```
-The results of the repeated measures t-test show us that at alpha=0.05, there is a significant difference between pre- and post weight. This indicates a statistically significant effect of the diet. However, since there are three different types of diets, it is possible that if combined they have a significant effect on weight loss, but there are differences between the diets. It is possible, that one of the diets leads to no weight loss, but the other two do. As such, we need to conduct a one-way ANOVA to investigate the effect of the type of diet.
 ```{r, echo=TRUE}
 t.test(data$weight6weeks, data$preweight,paired=TRUE)
 ```
 
+The results of the repeated measures t-test show us that there is a significant difference between pre- and post weight. This suggests an effect of diet on weight. However, since there are three different types of diets, it is possible that, when combined, they have a significant effect on weight loss, but there are differences between the diets. It is possible, that one of the diets leads to no weight loss, but the other two do. As such, we need to conduct a one-way ANOVA to investigate the effect of the type of diet.
+
 **b)**
 
 
-First, testing for normality, we can see that data is approximately normal distributed. However, extreme values on both tails spread some doubt about the normality assumption.
+After establishing normality in **a**, we additionally check for homoscedasticity here.
 ```{r, echo=TRUE}
 one_w_anova <- lm(weight.lost ~ diet, data)
+par(mfrow=c(1,2))
 qqnorm(one_w_anova$residuals); qqline(one_w_anova$residuals)
-
-```
-
-
-Secondly, testing for the independence of residuals. For this, we can plot the order of observation against the residuals. Here, we see data to be randomly distributed within blocks.
-```{r, echo=TRUE}
 plot(one_w_anova, which = 1)
+
 ```
 
-We now can do a one-way ANOVA to test the effect of type of diet. The result indicate, that there is a significant difference in the type of diet on weight loss (at alpha=0.5). Based on the result of the ANOVA alone, we cannot conclude which type of diet is different.
+The plots show no pattern in the distribution of residuals in relation to fitted values.
+
+We now can do a one-way ANOVA to test the effect of type of diet.
+
 ```{r, echo=TRUE}
 res_ow <-anova(one_w_anova)
 res_ow
 ```
-To identify which type of diet is best for loosing weight, we will conduct post-hoc t-tests between all pairs of the ANOVA. Here, we must account for the multiple comparisons and adjust our sigificance level accordingly. As such, we will use Bonferroni correction.
+
+The result indicate, that there is a significant difference in the type of diet on weight loss. Based on the result of the ANOVA alone, we cannot conclude which type of diet is different.
+
+To identify which type of diet is best for losing weight, we will conduct post-hoc t-tests between all pairs of the ANOVA. Here, we must account for the multiple comparisons and adjust our significance level accordingly. As such, we will use Bonferroni correction.
 
 ```{r, echo=TRUE}
 post_hoc <- pairwise.t.test(data$weight.lost, data$diet, p.adjust.method = "bonferroni")
@@ -89,14 +83,19 @@ post_hoc
 We can see that there is a significant difference between diets 1 and 3 and diets 2 and 3. However, no significant difference between diet 1 and 2 was found.
 
 ```{r, echo=TRUE}
-means <- aggregate(data$weight.lost, list(data$diet),mean)
+
+one_sample_t_test <- function(X){
+  return(t.test(X)$p.value)
+}
+means <- aggregate(data$weight.lost, list(data$diet), mean)
+means$p.value <- aggregate(data$weight.lost, list(data$diet), one_sample_t_test)$x
+means$significant <- means$p.value < 0.05
 names(means)[2] <- "Average weight loss"
 names(means)[1] <- "Diet Type"
-
 means
 ```
 
-Comparing the means, we can see the direction of the relationships. Based on the significant differences found before, we can conclude that diet 3 is more effective than diets 1 and 2. It is the best diet for losing weight. But, all three diets lead to weight loss.
+Comparing the means, we can see the direction of the relationships. Based on the significant differences found before, we can conclude that diet 3 is more effective than diets 1 and 2. It is the best diet for losing weight. But, all three diets lead to weight loss, as the one-sample t-tests compared to $\mu=0$ show. They are all significantly different from 0.
 
 
 It is also possible to alternatively conduct a Kruskal-Wallis test instead of the one-way ANOVA. Again, a significant difference at the same significance level between groups was found.
@@ -105,7 +104,11 @@ It is also possible to alternatively conduct a Kruskal-Wallis test instead of th
 kruskal.test(weight.lost ~ diet, data)
 ```
 
+
+
 **c)**
+
+
 
 Before performing a two-way ANOVA, we run normality and variance checks on the lost weight.
 
@@ -115,20 +118,21 @@ shapiro <- check_normality("weight.lost", data, list("gender", "diet"))
 
 Based on the plots, the data appear to be normally distributed. The Shapiro-Wilk test also does not find a violation of the normality assumption, with $p = `r sprintf('%.2f',shapiro[[1]]$p.value)`$. Further, we check the assumption of a homogeneity of variances.
 
+To decide whether the model should contain an interaction term, we plot the means of lost weight by gender and diet.
+
+```{r, echo=TRUE}
+attach(data)
+par(mfrow=c(1,2))
+interaction.plot(diet, gender, weight.lost)
+interaction.plot(gender, diet, weight.lost)
+```
+
 ```{r, echo=TRUE}
 two_w_anova <- lm(weight.lost ~ diet * gender, data)
 check_vars(two_w_anova)
 ```
 
-The qq-plot shows slight deviations of the residuals' sample quantiles from the theoretical quantiles. Thus, the interpretations of the ANOVA may be impacted. Nonetheless, we will proceed with the ANOVA for the purposes of the exercise.
-
-To decide whether the model should contain an interaction term, we plot the means of lost weight by gender and diet.
-
-```{r, echo=TRUE}
-par(mfrow=c(1,2))
-interaction.plot(data$diet, data$gender, data$weight.lost)
-interaction.plot(data$gender, data$diet, data$weight.lost)
-```
+The Q-Q plot shows deviations of the residuals' sample quantiles from the theoretical quantiles. Thus, the interpretations of the ANOVA may be impacted. Nonetheless, we will proceed with the ANOVA for the purposes of the exercise.
 
 As the non-parallel lines in the plots suggest, we can assume an interaction of diet and gender on lost weight. 
 
@@ -141,4 +145,14 @@ The full two-way ANOVA results in an interaction effect of diet and gender on lo
 
 **e)**
 
-[EVALUATE B VS C]
+As found in **c**, the effect of diet on weight loss depends on gender. As such, we prefer the two-way ANOVA as the model in **b** does not take this information into account. Specifically, the first model will result in more accurate diet recommendations to maximize weight loss.
+
+```{r}
+diet1 <- two_w_anova$coefficients[[1]]
+diet2 <- diet1 + two_w_anova$coefficients[[2]]
+diet3 <- diet2 + two_w_anova$coefficients[[3]]
+
+dietgroups <- c(diet1,diet2,diet3)
+print(dietgroups)
+```
+The model from the two-way ANOVA predicts weight losses of $`r sprintf('%.2f', dietgroups)`$ for diet group 1, 2, and 3, respectively.
