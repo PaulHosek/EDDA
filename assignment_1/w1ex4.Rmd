@@ -7,6 +7,7 @@ output: html_document
 
 ```{r, include=FALSE}
 source("../utilities.R")
+library(knitr)
 ```
 
 
@@ -25,7 +26,7 @@ random_plots <- cbind(
 plots_df <- data.frame(random_plots)
 header <- c("plot", "block", "N", "P", "K")
 colnames(plots_df) <- header
-plots_df[1:8,]
+plots_df[1:4,]
 ```
 
 **b)**
@@ -68,15 +69,14 @@ check_vars(lm_aov12)
 With the removal of the interaction term, equal variances may be assumed. For completeness, we will proceed with both models.
 
 ```{r}
-aov1 = anova(lm_aov1)
-print("Anova without interaction term.")
+# Anova without interaction term.
+aov1 = anova(lm_aov1) 
 print(aov1)
+# Anova with the interaction term.
 aov2 = anova(lm_aov12)
-print("")
-print("Anova with the interaction term.")
 print(aov2)
 ```
-The model without the interaction term and with the interaction term both draw a similar picture. There does not appear to be an interaction effect of block x Nitrogen on yield. Therefore, block does not affect our research question about the effect of Nitrogen on yield. A more sensible way to take block into account in the analysis would be in an additive model.
+The model without the interaction term and with the interaction term both paint a similar picture. There does not appear to be an interaction effect of block x Nitrogen on yield. Therefore, block does not affect our research question about the effect of Nitrogen on yield. A more sensible way to take block into account in the analysis would be in an additive model.
 
 The Friedman test is not applicable in this case because there are two observations of the outcome variable (yield) per block x Nitrogen combination. In contrast, the Friedman test only applies to situations with 1 observation per factor combination.
 
@@ -94,7 +94,11 @@ models <- list(
   lm(yield ~ block * K + N + P, npk)
 )
 
-result_matrix <- matrix("-",nrow = 8, ncol = length(models), dimnames = list(c("Residual sum of Squares","block", "N", "P", "K","block:N","block:P","block:K"), paste0("model", 1:length(models))))
+result_matrix <- matrix("-",nrow = 8, ncol = length(models), 
+                        dimnames = list(c(
+                          "Residual sum of Squares","block", "N", "P",
+                          "K","block:N","block:P","block:K"), 
+                          paste0("model", 1:length(models))))
 
 # loop through each model
 for (i in 1:length(models)) {
@@ -103,15 +107,15 @@ for (i in 1:length(models)) {
   count_terms <- 1
   for (term in terms_in_model){
     
-    result_matrix[term, i] <- ifelse(anova_table[count_terms, "Pr(>F)"] < 0.05, paste0(term, "*"), term)
+    result_matrix[term, i] <- 
+      ifelse(anova_table[count_terms, "Pr(>F)"] < 0.05, paste0(term, "*"), term)
     count_terms <- count_terms+1
   }
-  result_matrix["Residual sum of Squares", i] <- round(anova(models[[i]])[nrow(anova(models[[i]])), "Sum Sq"],2)
+  result_matrix["Residual sum of Squares", i] <- 
+    round(anova(models[[i]])[nrow(anova(models[[i]])), "Sum Sq"],2)
 
 }
-
-result_matrix
-
+kable(result_matrix)
 ```
 Our result table compare different models. For each possible term in the model, we indicated whether the term is part of the model by writing the term in the cell (e.g., N) or not ("-"). Further, if the term was significant it is written with an asterisk (e.g., K*). As such, we can reconstruct how each model looks from this table. We also provide the Sum of Square of the model as an indicator of model fit. We can see that dropping P from the model between models 1 and 2 reduces model fit much less than dropping K (model3). Further, model 1 and 2 have the best fit. We also observer that if we drop the interaction term from the model (model5), model fit severely suffers. Based on our previous analysis and the current observations (and Occam's razor), we prefer model 2. Model 2 does not include P (potassium), so it is much more parsimonious. If predictions must be as precise as possible and measuring potassium is not a lot of work, model 1 should be preferred instead.
 
@@ -124,6 +128,8 @@ Below, we base our normality assumption on the checks done in **c**.
 library(lme4)
 mixed_model <- lmer(yield ~ N + (1|block), REML=FALSE, data = npk)
 mixed_model1 <- lmer(yield ~ (1|block), REML=FALSE, data = npk)
-anova(mixed_model1, mixed_model)
+mm_aov <- anova(mixed_model1, mixed_model)
+print(mm_aov)
 ```
-[COMPARE TO C]
+
+The mixed effects model returns a significant effect of Nitrogen on yield, with $p = `r sprintf('%.3f',mm_aov["mixed_model","Pr(>Chisq)"])`$. Therefore, it is in agreement with the additive, fixed-effects model in **c**. In contrast to the fixed effects model, this analysis does not allow for interpretations on the effect of block on yield because block was assumed to be a random factor.

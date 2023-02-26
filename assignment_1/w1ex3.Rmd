@@ -18,7 +18,7 @@ library(ggpubr)
 
 **a)**
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.height=2}
 data <- read.table("data/diet.txt", header=TRUE)
 data$diet <- factor(data$diet)
 data$gender <- factor(data$gender)

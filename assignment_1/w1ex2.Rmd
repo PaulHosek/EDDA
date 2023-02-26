@@ -35,7 +35,7 @@ before measurement and  $p = `r sprintf('%.2f',shapiros[[2]]$p.value)`$ for the 
 
 
 Further, we observe a very high correlation of the data. The Pearson correlation coefficient is $r = 0.99$ with significant correlation of pre and post measurement $p = 0.99$.
-```{r, echo=TRUE, fig.height = 2.5}
+```{r, echo=TRUE, fig.height = 2}
 
 ggscatter(data, x = colnames(data)[1], y = colnames(data)[2],
           add = "reg.line",cor.coef = TRUE, conf.int = TRUE,
@@ -83,7 +83,7 @@ This confidence interval could be improved by resampling more often.
 However, since the sample size is only 18, conclusions about the true population mean are limited. As such, we recommend to collect more data.
 
 **d)**
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.height=2.5}
 nsamples <- 1000;
 thetas <- seq(3, 12, by = .01);
 t <- max(data$After8weeks)
