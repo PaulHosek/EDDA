@@ -37,7 +37,7 @@ To obtain the minimal sample size for a confidence interval of length 100, we us
 alpha = .04
 ci_length = 100
 margin = ci_length / 2 
-q = qnorm(1-alpha/2) # approximating with z-scores instead of t-values because t-distribution depends on sample size itself
+q = qnorm(1-alpha/2) # z-scores, t-dist depends on sample size
 n = q^2 * sd(birthweight)^2 / margin^2 
 ceiling(n)
 ```
