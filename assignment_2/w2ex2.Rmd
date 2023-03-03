@@ -1,0 +1,194 @@
+---
+title: "w2ex2"
+author: "Paul Hosek"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+source("../utilities.R")
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(car)
+library(knitr)
+if (!require("glmnet")) {
+  install.packages("glmnet")
+}
+library("glmnet")
+```
+
+# 2
+```{r, echo =TRUE}
+data <- read.table("expensescrime.txt", header = TRUE);
+```
+
+## a) 
+```{r, echo =TRUE}
+
+# graphical summary?
+pairs(data[,2:7])
+
+
+# Influence points
+full_model <- lm(expend ~ bad + crime + lawyers + employ + pop, data = data)
+cdist <- cooks.distance(full_model)
+plot(1:length(cdist), cdist, xlab = "Index", ylab = "Cook's Distance",
+     main = "Influence Points based on Cook's Distance", type="b")
+abline(h=1, col="red")
+
+# Collinearity
+print(vif(full_model))
+```
+Our graphical summary of the data shows that the crime rate, lawyers, employment and population are most notably related with expenditure. "Crime" shows random variation with all other variables.
+
+Analyses of Influence points based on Cook's distance indicates that 4 observations with disproportionate influence on the model, with one marginally outside the cutoff of one. All four observations must undergo further inspection and potentially dropped from the model.
+
+Concerning Colliniarity, our rule of thumb dicatates that a VIF > 5 is concerning, indicating $R^2 >.8$. In our dataset, all variables besides "crime" were found with VIF >5, further "Pop" and "Employ" show extreme VIF values with VIF >30. This indicates that at least one variable is a linear combination of the others. This corroborates the inpection of the scatter-matrix from before, indicating close relationships between the variables. We can try to drop a single term from the model, but may need to drop more.
+
+```{r, echo=FALSE, include=TRUE}
+#!! IDK if we should include this
+
+# remove some terms from the model and look at VIF again:
+vif_nopop <- vif(lm(expend ~ bad + crime + lawyers + employ, data = data))
+vif_noemp <- vif(lm(expend ~ bad + crime + lawyers + pop, data = data))
+vif_nolaw <- vif(lm(expend ~ bad + crime + employ + pop, data = data))
+vif_nobad <- vif(lm(expend ~ crime + lawyers + employ + pop, data = data))
+
+
+# Combine the VIF values into a data frame
+vif_df <- data.frame(
+  vif.bad = c(vif_nopop["bad"], vif_noemp["bad"], vif_nolaw["bad"], vif_nobad["bad"]),
+  vif.crime = c(vif_nopop["crime"], vif_noemp["crime"], vif_nolaw["crime"], vif_nobad["crime"]),
+  vif.lawyers = c(vif_nopop["lawyers"], vif_noemp["lawyers"], vif_nolaw["lawyers"], vif_nobad["lawyers"]),
+  vif.employ = c(vif_nopop["employ"], vif_noemp["employ"], vif_nolaw["employ"], vif_nobad["employ"]),
+  vif.pop = c(vif_nopop["pop"], vif_noemp["pop"], vif_nolaw["pop"], vif_nobad["pop"])
+)
+
+# Add the model names as row names
+row.names(vif_df) <- c("Population", "Employment", "Lawyers", "Crime Rate")
+
+# Create the table
+kable(vif_df, format = "latex", caption = "VIF Values by term dropped from full model and Variable")
+```
+Dropping the term with the highest vif did not reduce all VIFs to under five, as such we should use the step-down or step-up method to select the correct model. 
+
+## b) Fit a linear regression model to the data using the step-up method.
+This method can be summarized in 4 steps:
+\begin{enumerate}
+ \item Build model with constant predictor (background model).
+ \item Find term that, if added to the model would maximise $R^2$.
+ \item If the variable is significant, add it to the model.
+ \item Go to 2 until 3 does not occur.
+\end{enumerate}
+``` {r}
+# find the next best term that significantly improves model fit
+find_best_term <- function(formula, data) {
+  best_fit <- summary(lm(formula, data))$adj.r.squared
+  best_term <- 1
+  # maximize r^2
+  for (term in names(data[,-c(1:2)])) {
+    if (!term %in% attr(formula, "term.labels")) {
+      cur_formula <- paste(formula, term, sep="+")
+      cur_model <- lm(cur_formula, data = data)
+      cur_fit <- summary(cur_model)$r.squared
+      if (cur_fit > best_fit) {
+        best_fit <- cur_fit
+        best_term <- term
+        best_coef_pval <- summary(cur_model)$coefficients[
+          nrow(summary(cur_model)$coefficients), "Pr(>|t|)"]
+
+      }
+    }
+  }
+  # test if increase is significant and return new formula
+  if (best_coef_pval<0.05){
+    return(best_term)
+  } else {
+    return(1)
+  }
+}
+# recursively add terms
+step_up <- function(formula, data){
+  new_term <- find_best_term(formula,data)
+  if (new_term == 1){
+    return(formula)}
+  step_up(paste(formula, new_term, sep="+"), data)
+}
+
+best_formula <- step_up("expend~1", data)
+best_model <- lm(best_formula, data=data)
+print(summary(best_model))
+print(vif(best_model))
+
+```
+The model found includes only "employ" and "lawyers". It explains a high proportion of the variance ($R^2=`r sprintf('%.2f',summary(best_model)$r.squared)`$). Analysis of collinearity found all VIF values larger than five. This model may not be the most suitable model as factors linearly depend on another.
+
+## c)
+```{r, echo =TRUE}
+hypo_state= data.frame(bad = 50, crime = 5000, lawyers = 5000, employ = 5000, pop = 5000)
+
+pred_interv_b <- predict(best_model,hypo_state,interval="prediction",level=0.95)
+```
+Given this model, we predict $p = `r sprintf('%.2f',pred_interv_b[[1]])`$ for "expend". 95\% and lower bounds are: $[`r sprintf('%.2f',pred_interv_b[[2]])`,`r sprintf('%.2f',pred_interv_b[[3]])`]$. We could improve this prediction by trying out different models (e.g., add more terms) and examine if the prediction interval becomes smaller. For example, we could try the full model from earlier:
+```{r, echo =TRUE}
+pred_interv_f <- predict(full_model,hypo_state,interval="prediction",level=0.95)
+```
+The prediction interval of the full model is larger ($`r sprintf('%.2f',pred_interv_f[[3]] - pred_interv_f[[2]])`$) than using the model found with the step-up method ($`r sprintf('%.2f',pred_interv_b[[3]] - pred_interv_b[[2]])`$).
+
+## d) Lasso method
+```{r, echo =TRUE}
+x <- as.matrix(data[,-2:-1]) # remove expend and state
+y <- as.double(as.matrix(data[,2])) # expend is response
+
+train=sample(1:nrow(x),0.67*nrow(x))
+x.train=x[train,]; y.train=y[train]
+x.test=x[-train,]; y.test=y[-train]
+
+lasso.mod=glmnet(x.train,y.train,alpha=1)
+lasso.cv=cv.glmnet(x.train,y.train,alpha=1,type.measure="mse")
+par(mfrow=c(1,2))
+
+lambda.min=lasso.cv$lambda.min; lambda.1se=lasso.cv$lambda.1se
+coef(lasso.mod,lasso.cv$lambda.min) #beta’s for the best lambda
+y.pred=predict(lasso.mod,s=lambda.min,newx=x.test) #predict for test
+mse.lasso=mean((y.test-y.pred)^2) #mse for the predicted test rows
+
+plot(lasso.mod,label=T,xvar="lambda")  #have a look at the lasso path         # idk if we need the plots here, not relevant for the question
+plot(lasso.cv) # the best lambda by cross-validation
+# plot(lasso.cv$glmnet.fit,xvar="lambda",label=T) # same as before
+
+print(mse.lasso)
+lass_model = lm("expend~bad", data=data)
+summary(lass_model)
+
+```
+The model chosen by the LASSO method only includes "bad" (i.e., the crime rate) as a predictor. This model is much more parsimonious than the model chosen in b, as it only includes a single predictor (Occam's Razor). However, this model explains  $R^2=`r sprintf('%.2f',summary(lass_model)$r.squared)`$ of the variance, which is lower than the variance explained by our previous model ($R^2=`r sprintf('%.2f',summary(best_model)$r.squared)`$).
+```{r, echo =TRUE}
+```
+
+```{r, echo =TRUE}
+```
+
+```{r, echo =TRUE}
+```
+
+```{r, echo =TRUE}
+```
+
+```{r, echo =TRUE}
+```
+
+```{r, echo =TRUE}
+```
+
+```{r, echo =TRUE}
+```
+
+
+
+
