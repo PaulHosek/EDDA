@@ -1,0 +1,81 @@
+---
+title: "w2ex4"
+author: "Robert Satzger"
+date: "3/9/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE, fig.height = 2.75)
+options(digits = 3)
+```
+
+# Exercise 4. Military Coups
+**a)**
+First, we test for collinearity between the explanatory variables in the dataset.
+```{r}
+library()
+coups <- read.table("data/coups.txt", header = T)
+pairs(coups[,-1])
+```
+There is no clear relationship between any of the explanatory variables. Thus, we perform the Poisson regression with the entire dataset.
+
+Since we want to investigate the significance of the explanatory variables to model performance, we will treat all variables as continuous. This ensures that we obtain coefficients and significance scores for the factor variable (e.g., pollib) rather than its levels.
+
+```{r}
+coupsglm <- glm(miltcoup~., family = poisson, data = coups)
+summary(coupsglm)
+```
+
+The poisson regression suggests that only the explanatory variables of oligarchy, political liberalization, and parties significantly influences the odds of a successful military coup.
+
+**b)**
+As in **a**, we continue to treat pollib as continuous to ensure the interpretability of the model output.
+
+```{r}
+model_df <- coups # create copy for step-down selection
+done <- F
+while (!done){
+  model <- glm(miltcoup ~ ., family = poisson, data = model_df)
+  model_smry <- summary(model)
+  print(model_smry$call)
+  print(model_smry$coefficients)
+  
+  model_smry_coefs <- model_smry$coefficient[-1,"Pr(>|z|)"] # exclude intercept
+  is_insignificant <- model_smry_coefs > .05
+  if (sum(is_insignificant) == 0) done = T
+  else{
+    excl_var <- model_smry_coefs[which.max(model_smry_coefs)]
+    print(paste("Excluding variable:", names(excl_var)))
+    model_df <- model_df[, -which(names(model_df) == names(excl_var))]
+  }
+}
+```
+
+The resulting model is the same as found in **a**; it only includes the three variables oligarchy, pollib, and parties in an additive model. 
+This means we can go ahead with this reduced model of miltcoup.
+
+**c)**
+<!-- SHOULD THE ANALYSIS IN A AND B ALREADY USE A FACTOR?? -->
+<!-- To obtain the predictions for each level, we convert pollib to a factor. -->
+```{r}
+# model_df$pollib <- factor(model_df$pollib)
+# model <- glm(miltcoup ~ pollib + oligarchy + parties, family = poisson, data = model_df)
+# model_smry <- summary(model)
+# print(model_smry$call)
+# print(model_smry$coefficients)
+
+# miltcoup_pollib0 <- exp(.21 +  .09 * mean(coups$oligarchy) + .022 * mean(coups$parties))
+# miltcoup_pollib1 <- miltcoup_pollib0 - .50
+# miltcoup_pollib2 <- miltcoup_pollib0 - 1.11
+# 
+# print(c(miltcoup_pollib0, miltcoup_pollib1, miltcoup_pollib2))
+
+obs <- data.frame(pollib = 0:2, oligarchy = mean(model_df$oligarchy), parties = mean(model_df$parties))
+print(obs)
+y_hat <- predict(model, obs, type="response")
+names(y_hat) <- 0:2
+print(y_hat)
+```
+
+As could be expected, the number of successful military coups seems to be negatively associated with the level of political liberalization. For a country with an average duration of oligarchy rule and an average number of political parties, the **expected number** of military coups is $3.04$, $1.71$, and $.96$ for levels 0,1, and 2, of political liberalization, respectively.

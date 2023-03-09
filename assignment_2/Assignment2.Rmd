@@ -1,0 +1,42 @@
+---
+title: "Assignment 1"
+author: 'Group 47: Luca Cavellini, Paul Hosek, Robert Satzger'
+date: "2/20/2023"
+output:
+  pdf_document: default
+  html_document: default
+fontsize: 11pt
+highlight: tango
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE, fig.height = 2.75)
+
+options(digits = 3)
+
+# setting standard R plot themes to be used by ggplots
+library(ggplot2)
+theme_set(theme(
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(),
+  panel.background = element_blank(), 
+  axis.line = element_line(colour = "black"))) 
+```
+
+# Preparation. Defining Re-Usable Assumption Checks
+To standardize assumption checks throughout the assignment, we use the following functions. `check_normality` plots the histogram, qq-plot, and boxplots for all variables of interest and returns the shapiro-wilk test. `check_vars` extends assumption checks for ANOVAs by showing the qq-plot of the residuals and plotting the fitted values against the residuals.
+
+```{r, code = readLines("../utilities.R")}
+```
+For a consistent report style, we always report two significant decimal digits (at maximum three decimals). Further, all tests use a significance level $\alpha = 0.05$.
+
+```{r child = 'w1ex1.Rmd'}
+```
+
+```{r child = 'w1ex2.Rmd'}
+```
+
+```{r child = 'w1ex3.Rmd'}
+```
+
+```{r child = 'w1ex4.Rmd'}
+```
