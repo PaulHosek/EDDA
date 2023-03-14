@@ -17,12 +17,12 @@ library(knitr)
 
 - models will only work with !nan ages
 
-# Exercise 3. Titanic
+#3
 ## a)
 - multiple summaries of data
 - fit log regression,, w/o interactions -> survival & predictor Pclass, age, sex
 ```{r, echo =TRUE}
-data_titanic <- read.table("data/titanic.txt", header=TRUE)
+data_titanic <- read.table("titanic.txt", header=TRUE)
 data_titanic$PClass <- as.factor(data_titanic$PClass)
 data_titanic$Sex <- as.factor(data_titanic$Sex)
 data_titanic$Survived <- as.factor(data_titanic$Survived)
@@ -50,9 +50,13 @@ labs(title = "Survival by class") + theme(aspect.ratio = .5)
 ```
 ```{r, echo =TRUE}
 model_log1 <- glm(Survived ~ PClass + Age + Sex, data = data_titanic, family = binomial())
-summary(model_log1)
+drop1(model_log1, test="Chisq")
 ```
-Excluding interaction effects, we find that being a female or a first class passengers or young increases your odds of survival. However, we cannot know how a combination of these will impact the odds. From the main effects we can conclude: Males are $`r sprintf('%.2f',1/exp(coef(model_log1)["Sexmale"]))`$ more likely to die compared to females. 2nd-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass2nd"]))`$ and third-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass3rd"]))`$ as likely to die than passengers in other classes (calculated as 1/exp(coefficient_of_interest)). Further, for each year a person is older, odds decrease by a factor of $`r sprintf('%.2f',exp(coef(model_log1)["Age"]))`$: younger passengers are more likely to survive (calculated as exp(age)). All these main effects are statistically significantly associated with survival.
+```{r, echo =TRUE}
+summary(model_log1)$coef
+```
+We find that all factors PClass, Age and Sex are significant. Further, excluding interaction effects, we find that being a female or a first class passengers or young increases your odds of survival. However, we cannot know how a combination of these will impact the odds. From the main effects we can conclude: Males are $`r sprintf('%.2f',1/exp(coef(model_log1)["Sexmale"]))`$ more likely to die compared to females. 2nd-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass2nd"]))`$ and third-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass3rd"]))`$ as likely to die than passengers in other classes (calculated as 1/exp(coefficient_of_interest)). Further, for each year a person is older, odds decrease by a factor of $`r sprintf('%.2f',exp(coef(model_log1)["Age"]))`$: younger passengers are more likely to survive (calculated as exp(age)). All these main effects are statistically significantly associated with survival.
+
 
 ## b)
 ```{r, echo =TRUE}
@@ -68,15 +72,6 @@ kable(all_comb_55, format = "latex", caption = "Survival probability for 55 year
 We observe that being female has the largest influence on survival. Independent of gender, more expensive classes have larger survival probability. We observe that females in the first class have a extremely high survival probability of $`r sprintf('%.2f',all_comb_55$Survival_Probability[[1]])`$.
 
 ## c)
-
-- method to predict
-  - logistic regression
-  - MCMC
-  - machine learning
-  - idk bro lecture is not out yet
-- measure of quaility
-  - validation set
-  - area under ROC
 
 We can use the estimated logistic regression model to predict the probability of survival for a new observation, and then apply a threadshold to classify the observation as either a survivor (1) or a non-survivor (0).
 
