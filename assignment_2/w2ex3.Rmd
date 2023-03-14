@@ -69,15 +69,6 @@ We observe that being female has the largest influence on survival. Independent 
 
 ## c)
 
-- method to predict
-  - logistic regression
-  - MCMC
-  - machine learning
-  - idk bro lecture is not out yet
-- measure of quaility
-  - validation set
-  - area under ROC
-
 We can use the estimated logistic regression model to predict the probability of survival for a new observation, and then apply a threadshold to classify the observation as either a survivor (1) or a non-survivor (0).
 
 Here, we first fit the logistic regression model to the observed data to estimate $\hat{\theta}$ in $P\left(Y_k=1\right)=\frac{1}{1+e^{-x_k^T \theta}}, \quad k=1, \ldots, N$. Then, we use this estimate to predict the probability of survival for a new passenger with predictor values $X_{new}$. We then apply a threshold  $p_0$ to classify the new passenger into survivor (1) or a non-survivor (0). Specifically, whether the predicted probability $\hat{P}_{new}$ is above or below the threshold is used to classify a new passenger.
