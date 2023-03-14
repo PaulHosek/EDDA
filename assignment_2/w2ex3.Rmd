@@ -50,9 +50,13 @@ labs(title = "Survival by class") + theme(aspect.ratio = .5)
 ```
 ```{r, echo =TRUE}
 model_log1 <- glm(Survived ~ PClass + Age + Sex, data = data_titanic, family = binomial())
-summary(model_log1)
+drop1(model_log1, test="Chisq")
 ```
-Excluding interaction effects, we find that being a female or a first class passengers or young increases your odds of survival. However, we cannot know how a combination of these will impact the odds. From the main effects we can conclude: Males are $`r sprintf('%.2f',1/exp(coef(model_log1)["Sexmale"]))`$ more likely to die compared to females. 2nd-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass2nd"]))`$ and third-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass3rd"]))`$ as likely to die than passengers in other classes (calculated as 1/exp(coefficient_of_interest)). Further, for each year a person is older, odds decrease by a factor of $`r sprintf('%.2f',exp(coef(model_log1)["Age"]))`$: younger passengers are more likely to survive (calculated as exp(age)). All these main effects are statistically significantly associated with survival.
+```{r, echo =TRUE}
+summary(model_log1)$coef
+```
+We find that all factors PClass, Age and Sex are significant. Further, excluding interaction effects, we find that being a female or a first class passengers or young increases your odds of survival. However, we cannot know how a combination of these will impact the odds. From the main effects we can conclude: Males are $`r sprintf('%.2f',1/exp(coef(model_log1)["Sexmale"]))`$ more likely to die compared to females. 2nd-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass2nd"]))`$ and third-class passengers are $`r sprintf('%.2f',1/exp(coef(model_log1)["PClass3rd"]))`$ as likely to die than passengers in other classes (calculated as 1/exp(coefficient_of_interest)). Further, for each year a person is older, odds decrease by a factor of $`r sprintf('%.2f',exp(coef(model_log1)["Age"]))`$: younger passengers are more likely to survive (calculated as exp(age)). All these main effects are statistically significantly associated with survival.
+
 
 ## b)
 ```{r, echo =TRUE}
