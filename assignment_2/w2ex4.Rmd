@@ -5,35 +5,43 @@ date: "3/9/2023"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE, fig.height = 2.75)
 options(digits = 3)
 ```
 
 # Exercise 4. Military Coups
-**a)**
+## a)
 First, we test for collinearity between the explanatory variables in the dataset.
 ```{r}
-library()
 coups <- read.table("data/coups.txt", header = T)
 pairs(coups[,-1])
 ```
-There is no clear relationship between any of the explanatory variables. Thus, we perform the Poisson regression with the entire dataset.
+There is no clear relationship between any of the explanatory variables. Thus, we can assume there is no issue with collinearity and we include all explanatory variables in the Poisson regression.
 
-Since we want to investigate the significance of the explanatory variables to model performance, we will treat all variables as continuous. This ensures that we obtain coefficients and significance scores for the factor variable (e.g., pollib) rather than its levels.
+For simplicity, we treat all discrete numerical variables as continuous. However, we convert the categorical variable pollib to a factor.
 
 ```{r}
+coups$pollib <- as.factor(coups$pollib)
 coupsglm <- glm(miltcoup~., family = poisson, data = coups)
-summary(coupsglm)
+drop1(coupsglm, test = "Chisq")
 ```
 
-The poisson regression suggests that only the explanatory variables of oligarchy, political liberalization, and parties significantly influences the odds of a successful military coup.
+The poisson regression suggests that only the explanatory variables of oligarchy, pollib, and parties significantly influence the odds of a successful military coup. As shown by the positive signs of the coefficients below, oligarchy and parties are both estimated to increase the odds of successful military coups. Compared to no civil rights ("pollib0"), having limited ("pollib1") or full ("pollib2") civil rights decreases the odds of coups.
 
-**b)**
-As in **a**, we continue to treat pollib as continuous to ensure the interpretability of the model output.
+```{r}
+summary(coupsglm)$coefficient[c("(Intercept)","oligarchy","pollib1", "pollib2","parties"),"Estimate"]
+```
+
+
+## b)
+To ensure interpretability of the summary output, we treat the variable pollib as continuous during the step-down procedure. This is possible as pollib is an ordinal variable: Increasing levels of pollib correspond to increasing levels of political liberalization of a country. 
+Once the step-down procedure is completed, we treat pollib categorically again to compare model fit.
 
 ```{r}
 model_df <- coups # create copy for step-down selection
+model_df$pollib <- as.numeric(model_df$pollib)
+
 done <- F
 while (!done){
   model <- glm(miltcoup ~ ., family = poisson, data = model_df)
@@ -41,41 +49,40 @@ while (!done){
   print(model_smry$call)
   print(model_smry$coefficients)
   
-  model_smry_coefs <- model_smry$coefficient[-1,"Pr(>|z|)"] # exclude intercept
+  model_smry_coefs <- model_smry$coefficient[-1,"Pr(>|z|)"] # ignore intercept
   is_insignificant <- model_smry_coefs > .05
   if (sum(is_insignificant) == 0) done = T
-  else{
+  else {
     excl_var <- model_smry_coefs[which.max(model_smry_coefs)]
-    print(paste("Excluding variable:", names(excl_var)))
+    # if (substr(names(excl_var), 1, 6) == "pollib"){
+    #   names(excl_var) <- "pollib"
+    #   print("WARNING POLLIB")
+    # }
+    writeLines(paste("\nExcluding variable:", names(excl_var), "\n"))
     model_df <- model_df[, -which(names(model_df) == names(excl_var))]
   }
 }
 ```
 
-The resulting model is the same as found in **a**; it only includes the three variables oligarchy, pollib, and parties in an additive model. 
-This means we can go ahead with this reduced model of miltcoup.
+The step-down procedure corroborates our findings from a. Both approaches suggest that the most sensible additive model would contain only the three variables of oligarchy, pollib, and parties. 
 
-**c)**
-<!-- SHOULD THE ANALYSIS IN A AND B ALREADY USE A FACTOR?? -->
-<!-- To obtain the predictions for each level, we convert pollib to a factor. -->
+We can compare this reduced model to the model full model from **a**. Here we treat pollib categorically again.
+
 ```{r}
-# model_df$pollib <- factor(model_df$pollib)
-# model <- glm(miltcoup ~ pollib + oligarchy + parties, family = poisson, data = model_df)
-# model_smry <- summary(model)
-# print(model_smry$call)
-# print(model_smry$coefficients)
+coupsglm_reduced <- glm(miltcoup~oligarchy+pollib+parties, family = poisson, data = coups)
+comparison <- anova(coupsglm_reduced, coupsglm, test = "Chisq")
+comparison
+```
 
-# miltcoup_pollib0 <- exp(.21 +  .09 * mean(coups$oligarchy) + .022 * mean(coups$parties))
-# miltcoup_pollib1 <- miltcoup_pollib0 - .50
-# miltcoup_pollib2 <- miltcoup_pollib0 - 1.11
-# 
-# print(c(miltcoup_pollib0, miltcoup_pollib1, miltcoup_pollib2))
+Excluding five of the eight explanatory variables from the model did not yield a significant drop in model fitness with $p = `r sprintf('%.2f', comparison[2,"Pr(>Chi)"])`$. This shows that we have successfully reduced model complexity without significantly sacrificing fitness.
 
-obs <- data.frame(pollib = 0:2, oligarchy = mean(model_df$oligarchy), parties = mean(model_df$parties))
-print(obs)
-y_hat <- predict(model, obs, type="response")
-names(y_hat) <- 0:2
+## c)
+
+```{r}
+obs <- data.frame(pollib = factor(0:2), oligarchy = mean(coups$oligarchy), parties = mean(coups$parties))
+y_hat <- predict(coupsglm_reduced, obs, type="response")
+names(y_hat) <- c("0", "1", "2")
 print(y_hat)
 ```
 
-As could be expected, the number of successful military coups seems to be negatively associated with the level of political liberalization. For a country with an average duration of oligarchy rule and an average number of political parties, the **expected number** of military coups is $3.04$, $1.71$, and $.96$ for levels 0,1, and 2, of political liberalization, respectively.
+As could be expected, the number of successful military coups seems to be negatively associated with the level of political liberalization. For a country with an average duration of oligarchy rule and an average number of political parties, the **expected number** of military coups is $`r sprintf('%.2f', y_hat[["0"]])`$, $`r sprintf('%.2f', y_hat[["1"]])`$, and $`r sprintf('%.2f', y_hat[["2"]])`$ for levels 0,1, and 2, of political liberalization, respectively.

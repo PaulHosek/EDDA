@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -22,9 +22,9 @@ if (!require("glmnet")) {
 library("glmnet")
 ```
 
-# 2
+# Exercise 2. Expenditure on criminal activities
 ```{r, echo =TRUE}
-data <- read.table("expensescrime.txt", header = TRUE);
+data <- read.table("data/expensescrime.txt", header = TRUE);
 ```
 
 ## a) 
