@@ -17,12 +17,12 @@ library(knitr)
 
 - models will only work with !nan ages
 
-#3
+# Exercise 3. Titanic
 ## a)
 - multiple summaries of data
 - fit log regression,, w/o interactions -> survival & predictor Pclass, age, sex
 ```{r, echo =TRUE}
-data_titanic <- read.table("titanic.txt", header=TRUE)
+data_titanic <- read.table("data/titanic.txt", header=TRUE)
 data_titanic$PClass <- as.factor(data_titanic$PClass)
 data_titanic$Sex <- as.factor(data_titanic$Sex)
 data_titanic$Survived <- as.factor(data_titanic$Survived)
