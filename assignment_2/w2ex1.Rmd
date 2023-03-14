@@ -1,0 +1,51 @@
+---
+title: "w2ex2.Rmd"
+author: "Robert Satzger"
+date: "3/9/2023"
+output: html_document
+---
+
+# Exercise 1. Trees
+**a)**
+```{r}
+trees = read.table("data/treeVolume.txt", header = T)
+trees$type <- as.factor(trees$type)
+trees_lm1 <- lm(volume ~ type, data = trees)
+summary(trees_lm1)
+trees_aov <- anova(trees_lm1)
+print(trees_aov)
+```
+One-way Anova only makes sense with three or more levels. With two levels, p-value is the same as from t-test for difference of means between the two levels.
+Based on summary of lm, beech is 30.17 and oak is 5.08.
+
+**b)**
+```{r}
+trees_lm2 <- lm(volume ~ type * diameter + height, data = trees)
+summary(trees_lm2)
+anova(trees_lm2)
+trees_lm3 <- lm(volume ~ type * height + diameter, data = trees)
+summary(trees_lm3)
+anova(trees_lm3)
+```
+Neither interaction effect seems to be present. Instead, use purely additive model.
+
+```{r}
+trees_lm4 <- lm(volume ~ type + diameter + height, data = trees)
+summary(trees_lm4)
+anova(trees_lm4)
+```
+<!-- predict overall average -->
+
+**d)**
+A cylinder's volume is given by $V = \pi * (d/2)^2 * h$. So most logical explanatory factor would be to calculate the volume using this formula.
+
+<!-- What are the units? Normalize? -->
+```{r}
+trees$transform <- pi * (trees$diameter/2)^2 * trees$height
+trees_lm5 <- lm(volume ~ transform, data = trees)
+summary(trees_lm5)
+
+plot(trees$height, trees$diameter)
+```
+
+R^2 shows better than the other models.
