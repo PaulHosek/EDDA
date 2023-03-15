@@ -155,7 +155,7 @@ par(mfrow=c(1,2))
 
 lambda.min=lasso.cv$lambda.min; lambda.1se=lasso.cv$lambda.1se
 coef(lasso.mod,lasso.cv$lambda.min) #beta’s for the best lambda
-y.pred=predict(lasso.mod,s=lambda.min,newx=x.test) #predict for test
+y.pred=predict(lasso.mod,s=lambda.1se,newx=x.test) #predict for test
 mse.lasso=mean((y.test-y.pred)^2) #mse for the predicted test rows
 
 plot(lasso.mod,label=T,xvar="lambda")  #have a look at the lasso path         # idk if we need the plots here, not relevant for the question
@@ -165,6 +165,7 @@ plot(lasso.cv) # the best lambda by cross-validation
 print(mse.lasso)
 lass_model = lm("expend~bad", data=data)
 summary(lass_model)
+coef(lass_model, se=lambda.1se)
 
 ```
 The model chosen by the LASSO method only includes "bad" (i.e., the crime rate) as a predictor. This model is much more parsimonious than the model chosen in b, as it only includes a single predictor (Occam's Razor). However, this model explains  $R^2=`r sprintf('%.2f',summary(lass_model)$r.squared)`$ of the variance, which is lower than the variance explained by our previous model ($R^2=`r sprintf('%.2f',summary(best_model)$r.squared)`$).

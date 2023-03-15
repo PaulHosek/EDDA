@@ -13,14 +13,12 @@ library(dplyr)
 library(ggpubr)
 library(car)
 library(knitr)
+
 ```
 
-- models will only work with !nan ages
 
 #3
-## a)
-- multiple summaries of data
-- fit log regression,, w/o interactions -> survival & predictor Pclass, age, sex
+##a)
 ```{r, echo =TRUE}
 data_titanic <- read.table("titanic.txt", header=TRUE)
 data_titanic$PClass <- as.factor(data_titanic$PClass)
@@ -59,15 +57,19 @@ We find that all factors PClass, Age and Sex are significant. Further, excluding
 
 
 ## b)
+Based on the previous analyses, we know that Sex, Age and PClass are significantly related to the chance of survival. However, there may be interaction effects. It could be, that children are all treated equally independent of their Sex, but with higher ages, females are more likely to survive. The same may be true for CLass. For this, we compare the model used in a) with a model that adds an interactions between Age with Sex and Age with Class.
 ```{r, echo =TRUE}
-model_log2 <- glm(Survived ~ PClass + Age + Sex + PClass:Age + Age:Sex, data = data_titanic, family = binomial)
+model_log2 <- glm(Survived ~ PClass + Age + Sex + Age:PClass, data = data_titanic, family = binomial)
+summary(model_log2)
+model_log2 <- glm(Survived ~ PClass + Age + Sex + Age:Sex, data = data_titanic, family = binomial)
 summary(model_log2)
 ```
+We find, that the interaction in the second model of Age and being Male is significant. However, the interaction of Age and Class is not. Ideally we would choose the best model depending on results of fit to a validation set. Since we do not have the resources for this, we instead reason that the model with the interaction between Age and Sex should be kept. Theoretically, it is possible that the effect of being a child is larger than being a female. If this was the case, then we would expect an interaction between both variables, were at young age being a child improves survival odds most and at higher ages this effect is less strong. Here, it then matters what sex we are instead.
 
 ```{r, echo =TRUE}
 all_comb_55 <- expand.grid(PClass = levels(data_titanic$PClass), Sex = levels(data_titanic$Sex), Age = 55)
 all_comb_55$Survival_Probability <- predict(model_log2, all_comb_55, type = "response") # response = probabilities, "link" for odds
-kable(all_comb_55, format = "latex", caption = "Survival probability for 55 year olds.")
+kable(all_comb_55, format = "markdown", caption = "Survival probability for 55 year olds.")
 ```
 We observe that being female has the largest influence on survival. Independent of gender, more expensive classes have larger survival probability. We observe that females in the first class have a extremely high survival probability of $`r sprintf('%.2f',all_comb_55$Survival_Probability[[1]])`$.
 
