@@ -169,26 +169,6 @@ coef(lass_model, se=lambda.1se)
 
 ```
 The model chosen by the LASSO method only includes "bad" (i.e., the crime rate) as a predictor. This model is much more parsimonious than the model chosen in b, as it only includes a single predictor (Occam's Razor). However, this model explains  $R^2=`r sprintf('%.2f',summary(lass_model)$r.squared)`$ of the variance, which is lower than the variance explained by our previous model ($R^2=`r sprintf('%.2f',summary(best_model)$r.squared)`$).
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
 
 
 
