@@ -10,36 +10,51 @@ output: html_document
 ```{r}
 trees = read.table("data/treeVolume.txt", header = T)
 trees$type <- as.factor(trees$type)
+qqnorm(trees$volume); qqline(trees$volume)
 trees_lm1 <- lm(volume ~ type, data = trees)
 summary(trees_lm1)
 trees_aov <- anova(trees_lm1)
 print(trees_aov)
+
 ```
-One-way Anova only makes sense with three or more levels. With two levels, p-value is the same as from t-test for difference of means between the two levels.
-Based on summary of lm, beech is 30.17 and oak is 5.08.
+One-way Anova is robust against the normality assumption when there are more than ten observation per sample. The Anova test returned a p-value of 0.17, confirming the null hypothesis that the tree type does not influence the volume. Since we have only two levels it is possible to run Mann-Whitney test to see if the two distribution are shifted. Based on our results, the volume for the beech trees is 30.17, while for the oak is 5.08.
 
 **b)**
 ```{r}
 trees_lm2 <- lm(volume ~ type * diameter + height, data = trees)
-summary(trees_lm2)
-anova(trees_lm2)
-trees_lm3 <- lm(volume ~ type * height + diameter, data = trees)
-summary(trees_lm3)
-anova(trees_lm3)
-```
-Neither interaction effect seems to be present. Instead, use purely additive model.
 
+#summary(trees_lm2)
+anova(trees_lm2)
+
+
+trees_lm3 <- lm(volume ~ type * height + diameter, data = trees)
+#summary(trees_lm3)
+anova(trees_lm3)
+
+
+```
+In order to check whether diameter and height have the same influence on the volume for both tree types we fit two linear regression models. The p-values returned from our tests showed there's a interaction effect between the diameter and the type as well as between the height and the type.
+
+**c)**
 ```{r}
-trees_lm4 <- lm(volume ~ type + diameter + height, data = trees)
+trees_lm4 <- lm(volume ~ diameter + height + type, data = trees)
 summary(trees_lm4)
 anova(trees_lm4)
+drop1(trees_lm4, test='F')
 ```
-<!-- predict overall average -->
+```{r}
+tree_lm5 <- lm(volume ~ diameter + height, data = trees)
+summary(tree_lm5)
+summary(tree_lm5)$coefficient["diameter","Estimate"]*mean(trees$diameter)+summary(tree_lm5)$coefficient["height","Estimate"]*mean(trees$height)+summary(tree_lm5)$coefficient["(Intercept)","Estimate"]
+mean(trees$volume) #to check if the formula is correct
+```
+From the first point we found out that type doesn't influence the volume of trees, so we exclude it from our model. We tested that the coefficients of the diameter and height on the volume are respectively 4.63 and 0.42.
+To predict the volume of a tree based on the diameter and the height we followed the formula 
+$Y_ik = \mu + \alpha_i + \beta_iX_ik + e_ik$ by which we obtained a value of 32.58.
 
 **d)**
 A cylinder's volume is given by $V = \pi * (d/2)^2 * h$. So most logical explanatory factor would be to calculate the volume using this formula.
 
-<!-- What are the units? Normalize? -->
 ```{r}
 trees$transform <- pi * (trees$diameter/2)^2 * trees$height
 trees_lm5 <- lm(volume ~ transform, data = trees)
@@ -47,5 +62,4 @@ summary(trees_lm5)
 
 plot(trees$height, trees$diameter)
 ```
-
-R^2 shows better than the other models.
+An indicator of the quality of the model is R-squared, which is higher in the new model.
