@@ -13,7 +13,7 @@ options(digits = 3)
 # Exercise 4. Military Coups
 ## a)
 First, we test for collinearity between the explanatory variables in the dataset.
-```{r}
+```{r, fig.height=6}
 coups <- read.table("data/coups.txt", header = T)
 pairs(coups[,-1])
 ```
@@ -30,7 +30,8 @@ drop1(coupsglm, test = "Chisq")
 The poisson regression suggests that only the explanatory variables of oligarchy, pollib, and parties significantly influence the odds of a successful military coup. As shown by the positive signs of the coefficients below, oligarchy and parties are both estimated to increase the odds of successful military coups. Compared to no civil rights ("pollib0"), having limited ("pollib1") or full ("pollib2") civil rights decreases the odds of coups.
 
 ```{r}
-summary(coupsglm)$coefficient[c("(Intercept)","oligarchy","pollib1", "pollib2","parties"),"Estimate"]
+summary(coupsglm)$coefficient[
+  c("(Intercept)","oligarchy","pollib1", "pollib2","parties"),"Estimate"]
 ```
 
 
@@ -46,7 +47,6 @@ done <- F
 while (!done){
   model <- glm(miltcoup ~ ., family = poisson, data = model_df)
   model_smry <- summary(model)
-  print(model_smry$call)
   print(model_smry$coefficients)
   
   model_smry_coefs <- model_smry$coefficient[-1,"Pr(>|z|)"] # ignore intercept

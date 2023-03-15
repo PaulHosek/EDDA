@@ -23,17 +23,15 @@ library("glmnet")
 ```
 
 # Exercise 2. Expenditure on criminal activities
-```{r, echo =TRUE}
-data <- read.table("data/expensescrime.txt", header = TRUE);
-```
 
 ## a) 
-```{r, echo =TRUE}
-
-# graphical summary?
+```{r, echo =TRUE, fig.height=4}
+data <- read.table("data/expensescrime.txt", header = TRUE);
 pairs(data[,2:7])
+```
 
 
+```{r, echo =TRUE}
 # Influence points
 full_model <- lm(expend ~ bad + crime + lawyers + employ + pop, data = data)
 cdist <- cooks.distance(full_model)
@@ -44,13 +42,16 @@ abline(h=1, col="red")
 # Collinearity
 print(vif(full_model))
 ```
+
 Our graphical summary of the data shows that the crime rate, lawyers, employment and population are most notably related with expenditure. "Crime" shows random variation with all other variables.
 
 Analyses of Influence points based on Cook's distance indicates that 4 observations with disproportionate influence on the model, with one marginally outside the cutoff of one. All four observations must undergo further inspection and potentially dropped from the model.
 
 Concerning Colliniarity, our rule of thumb dicatates that a VIF > 5 is concerning, indicating $R^2 >.8$. In our dataset, all variables besides "crime" were found with VIF >5, further "Pop" and "Employ" show extreme VIF values with VIF >30. This indicates that at least one variable is a linear combination of the others. This corroborates the inpection of the scatter-matrix from before, indicating close relationships between the variables. We can try to drop a single term from the model, but may need to drop more.
 
-```{r, echo=FALSE, include=TRUE}
+Table 1 shows that dropping the term with the highest VIF did not reduce all VIFs to under five, as such we should use the step-down or step-up method to select the correct model. 
+
+```{r, echo=FALSE, include=TRUE, fig.pos = "H"}
 #!! IDK if we should include this
 
 # remove some terms from the model and look at VIF again:
@@ -75,10 +76,9 @@ row.names(vif_df) <- c("Population", "Employment", "Lawyers", "Crime Rate")
 # Create the table
 kable(vif_df, format = "latex", caption = "VIF Values by term dropped from full model and Variable")
 ```
-Dropping the term with the highest vif did not reduce all VIFs to under five, as such we should use the step-down or step-up method to select the correct model. 
 
-## b) Fit a linear regression model to the data using the step-up method.
-This method can be summarized in 4 steps:
+## b)
+The step-up method can be summarized in 4 steps:
 \begin{enumerate}
  \item Build model with constant predictor (background model).
  \item Find term that, if added to the model would maximise $R^2$.
@@ -126,13 +126,14 @@ print(summary(best_model))
 print(vif(best_model))
 
 ```
-The model found includes only "employ" and "lawyers". It explains a high proportion of the variance ($R^2=`r sprintf('%.2f',summary(best_model)$r.squared)`$). Analysis of collinearity found all VIF values larger than five. This model may not be the most suitable model as factors linearly depend on another.
+The model found includes only "employ" and "lawyers". It explains a high proportion of the variance ($R^2=`r sprintf('%.3f',summary(best_model)$r.squared)`$). Analysis of collinearity found all VIF values larger than five. This model may not be the most suitable model as factors linearly depend on another.
 
 ## c)
 ```{r, echo =TRUE}
-hypo_state= data.frame(bad = 50, crime = 5000, lawyers = 5000, employ = 5000, pop = 5000)
-
+hypo_state <- data.frame(
+  bad = 50, crime = 5000, lawyers = 5000, employ = 5000, pop = 5000)
 pred_interv_b <- predict(best_model,hypo_state,interval="prediction",level=0.95)
+pred_interv_b
 ```
 Given this model, we predict $p = `r sprintf('%.2f',pred_interv_b[[1]])`$ for "expend". 95\% and lower bounds are: $[`r sprintf('%.2f',pred_interv_b[[2]])`,`r sprintf('%.2f',pred_interv_b[[3]])`]$. We could improve this prediction by trying out different models (e.g., add more terms) and examine if the prediction interval becomes smaller. For example, we could try the full model from earlier:
 ```{r, echo =TRUE}
@@ -140,8 +141,11 @@ pred_interv_f <- predict(full_model,hypo_state,interval="prediction",level=0.95)
 ```
 The prediction interval of the full model is larger ($`r sprintf('%.2f',pred_interv_f[[3]] - pred_interv_f[[2]])`$) than using the model found with the step-up method ($`r sprintf('%.2f',pred_interv_b[[3]] - pred_interv_b[[2]])`$). Alternatively, assuming "improving" the interval means making it smaller, we could lower the confidence level.
 
-## d) Lasso method
+<!-- TODO: How to improve CI? -->
+
+## d) 
 ```{r, echo =TRUE}
+set.seed(42)
 x <- as.matrix(data[,-2:-1]) # remove expend and state
 y <- as.double(as.matrix(data[,2])) # expend is response
 
@@ -154,41 +158,18 @@ lasso.cv=cv.glmnet(x.train,y.train,alpha=1,type.measure="mse")
 par(mfrow=c(1,2))
 
 lambda.min=lasso.cv$lambda.min; lambda.1se=lasso.cv$lambda.1se
-coef(lasso.mod,lasso.cv$lambda.min) #beta’s for the best lambda
-y.pred=predict(lasso.mod,s=lambda.min,newx=x.test) #predict for test
+coef(lasso.mod,lasso.cv$lambda.1se) #beta’s for the best lambda
+y.pred=predict(lasso.mod,s=lambda.1se,newx=x.test) #predict for test
 mse.lasso=mean((y.test-y.pred)^2) #mse for the predicted test rows
 
-plot(lasso.mod,label=T,xvar="lambda")  #have a look at the lasso path         # idk if we need the plots here, not relevant for the question
+plot(lasso.mod,label=T,xvar="lambda")        
 plot(lasso.cv) # the best lambda by cross-validation
-# plot(lasso.cv$glmnet.fit,xvar="lambda",label=T) # same as before
+```
 
+
+```{r, echo =TRUE}
 print(mse.lasso)
-lass_model = lm("expend~bad", data=data)
+lass_model = lm("expend~lawyers+employ+pop", data=data)
 summary(lass_model)
-
 ```
-The model chosen by the LASSO method only includes "bad" (i.e., the crime rate) as a predictor. This model is much more parsimonious than the model chosen in b, as it only includes a single predictor (Occam's Razor). However, this model explains  $R^2=`r sprintf('%.2f',summary(lass_model)$r.squared)`$ of the variance, which is lower than the variance explained by our previous model ($R^2=`r sprintf('%.2f',summary(best_model)$r.squared)`$).
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-```{r, echo =TRUE}
-```
-
-
-
-
+The model chosen by the LASSO method includes lawyers, employ, and pop as predictors. This model is more complex than the model chosen in b, as that model only contained the predictors of lawyers and employ. Interestingly, both models lead to a similar R-squared with $R^2=`r sprintf('%.3f',summary(lass_model)$r.squared)`$ (LASSO model) and $R^2=`r sprintf('%.3f',summary(best_model)$r.squared)`$ (step-down model), respectively. Given a similar model fitness, the more parsimonious model should be favored. The adjusted R-squared reflects this with $R^2_{adj} =`r sprintf('%.3f',summary(lass_model)$adj.r.squared)`$ (LASSO model) and $R^2_{adj} =`r sprintf('%.3f',summary(best_model)$adj.r.squared)`$ (step-down model). Therefore, the model based on the step-down approach should be slightly favored.
